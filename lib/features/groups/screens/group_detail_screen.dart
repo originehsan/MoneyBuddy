@@ -1,8 +1,10 @@
 // MoneyBuddy
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -22,6 +24,7 @@ class GroupDetailScreen extends StatelessWidget {
     final args       = Get.arguments as Map<String, dynamic>? ?? {};
     final groupTitle = args['groupTitle'] as String? ?? 'Group';
     final group      = args['group']      as GroupModel?;
+    final groupId    = args['groupId']    as String? ?? '';
     final controller = Get.find<GroupController>();
 
     return DefaultTabController(
@@ -35,11 +38,7 @@ class GroupDetailScreen extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF059669), Color(0xFF047857)],
-                ),
+                gradient: AppColors.kBalanceGradient,
                 borderRadius: AppRadius.topBar,
               ),
               child: SafeArea(
@@ -49,11 +48,11 @@ class GroupDetailScreen extends StatelessWidget {
                     AppSpacing.lg,
                     AppSpacing.sm,
                     AppSpacing.lg,
-                    R.h(context, 0),
+                    0,
                   ),
                   child: Column(
                     children: [
-                      // Back + title row
+                      // Back + title + actions
                       Row(
                         children: [
                           GestureDetector(
@@ -65,7 +64,7 @@ class GroupDetailScreen extends StatelessWidget {
                                 borderRadius: AppRadius.tile,
                               ),
                               child: Icon(
-                                Icons.arrow_back_ios_new_rounded,
+                                CupertinoIcons.back,
                                 color: Colors.white,
                                 size: R.w(context, 18),
                               ),
@@ -79,34 +78,60 @@ class GroupDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
-                          // Add expense button
-                          GestureDetector(
-                            onTap: () => Get.toNamed(
-                              AppRoutes.addGroupTransaction,
-                              arguments: {
-                                'groupId':    args['groupId'],
-                                'groupTitle': groupTitle,
-                              },
-                            ),
-                            child: Container(
-                              padding: EdgeInsets.all(R.w(context, 8)),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: AppRadius.tile,
+                          Row(
+                            children: [
+                              // Share button
+                              GestureDetector(
+                                onTap: () => _shareExpenseSummary(
+                                  group, groupTitle),
+                                child: Container(
+                                  padding: EdgeInsets.all(R.w(context, 8)),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: AppRadius.tile,
+                                  ),
+                                  child: Icon(
+                                    CupertinoIcons.share,
+                                    color: Colors.white,
+                                    size: R.w(context, 18),
+                                  ),
+                                ),
                               ),
-                              child: Icon(
-                                Icons.add_rounded,
-                                color: Colors.white,
-                                size: R.w(context, 20),
+                              Gap(R.w(context, 8)),
+                              // Add expense button
+                              GestureDetector(
+                                onTap: () {
+                                  controller.resetExpenseForm();
+                                  controller.selectedGroupId.value = groupId;
+                                  Get.toNamed(
+                                    AppRoutes.addGroupTransaction,
+                                    arguments: {
+                                      'groupId':    groupId,
+                                      'groupTitle': groupTitle,
+                                    },
+                                  );
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.all(R.w(context, 8)),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: AppRadius.tile,
+                                  ),
+                                  child: Icon(
+                                    CupertinoIcons.add,
+                                    color: Colors.white,
+                                    size: R.w(context, 20),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
 
                       Gap(R.h(context, 16)),
 
-                      // Total expense
+                      // Total + paid summary
                       if (group != null) ...[
                         Text(
                           AppFormatters.formatCurrency(
@@ -152,7 +177,6 @@ class GroupDetailScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-
                       Gap(R.h(context, 12)),
                     ],
                   ),
@@ -171,14 +195,11 @@ class GroupDetailScreen extends StatelessWidget {
                     )
                   : TabBarView(
                       children: [
-                        // ── Expenses tab ─────────────────────────
                         _ExpensesTab(
-                          group: group,
+                          group:      group,
                           controller: controller,
-                          groupId: args['groupId'] as String? ?? '',
+                          groupId:    groupId,
                         ),
-
-                        // ── Members tab ──────────────────────────
                         _MembersTab(group: group),
                       ],
                     ),
@@ -188,9 +209,25 @@ class GroupDetailScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _shareExpenseSummary(GroupModel? group, String groupTitle) {
+    if (group == null) return;
+    final total = group.transactions.fold(0.0, (sum, t) => sum + t.amount);
+    final buffer = StringBuffer();
+    buffer.writeln('$groupTitle — Expense Summary');
+    buffer.writeln('Total: ${AppFormatters.formatCurrency(total)}');
+    buffer.writeln('');
+    for (final tx in group.transactions) {
+      buffer.writeln('${tx.description}: ${AppFormatters.formatCurrency(tx.amount)}');
+      for (final split in tx.splitDetails) {
+        final status = split.paid ? 'Paid' : 'Pending';
+        buffer.writeln('  ${split.memberEmail}: ${AppFormatters.formatCurrencyCompact(split.share)} ($status)');
+      }
+    }
+    Share.share(buffer.toString());
+  }
 }
 
-/// Expenses tab — list of all group expenses with split details.
 class _ExpensesTab extends StatelessWidget {
   final GroupModel group;
   final GroupController controller;
@@ -210,15 +247,12 @@ class _ExpensesTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.receipt_long_rounded,
+              CupertinoIcons.doc_text,
               size: R.w(context, 56),
               color: AppColors.kTextHint,
             ),
             Gap(R.h(context, 16)),
-            Text(
-              'No expenses yet',
-              style: AppTextStyles.headingSmall,
-            ),
+            Text('No expenses yet', style: AppTextStyles.headingSmall),
             Gap(R.h(context, 8)),
             Text(
               'Tap + to add the first expense',
@@ -231,10 +265,7 @@ class _ExpensesTab extends StatelessWidget {
 
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        R.h(context, 16),
-        AppSpacing.xxl,
-        100,
+        AppSpacing.xxl, R.h(context, 16), AppSpacing.xxl, 100,
       ),
       itemCount: group.transactions.length,
       separatorBuilder: (_, __) => Gap(R.h(context, 12)),
@@ -242,8 +273,8 @@ class _ExpensesTab extends StatelessWidget {
         final tx = group.transactions[i];
         return _ExpenseCard(
           transaction: tx,
-          groupId: groupId,
-          controller: controller,
+          groupId:     groupId,
+          controller:  controller,
         )
             .animate(delay: Duration(milliseconds: i * 60))
             .fadeIn(duration: 300.ms)
@@ -253,7 +284,6 @@ class _ExpensesTab extends StatelessWidget {
   }
 }
 
-/// Single expense card with split details and mark-as-paid.
 class _ExpenseCard extends StatelessWidget {
   final GroupTransaction transaction;
   final String groupId;
@@ -267,29 +297,42 @@ class _ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final paidCount  = transaction.splitDetails.where((s) => s.paid).length;
+    final totalCount = transaction.splitDetails.length;
+    final allPaid    = paidCount == totalCount && totalCount > 0;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.kCard,
         borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.kBorder, width: 0.8),
+        border: Border.all(
+          color: allPaid
+              ? AppColors.kSuccess.withValues(alpha: 0.3)
+              : AppColors.kBorder,
+          width: 0.8,
+        ),
         boxShadow: AppShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header row ───────────────────────────────────────
+          // ── Header ────────────────────────────────────────────
           Row(
             children: [
               Container(
                 padding: EdgeInsets.all(R.w(context, 8)),
-                decoration: const BoxDecoration(
-                  color: AppColors.kPrimaryTint,
+                decoration: BoxDecoration(
+                  color: allPaid
+                      ? AppColors.kSuccessBg
+                      : AppColors.kPrimaryTint,
                   borderRadius: AppRadius.tile,
                 ),
                 child: Icon(
-                  Icons.receipt_rounded,
-                  color: AppColors.kPrimary,
+                  allPaid
+                      ? CupertinoIcons.checkmark_circle_fill
+                      : CupertinoIcons.doc_text,
+                  color: allPaid ? AppColors.kSuccess : AppColors.kPrimary,
                   size: R.w(context, 18),
                 ),
               ),
@@ -306,7 +349,7 @@ class _ExpenseCard extends StatelessWidget {
                     ),
                     Gap(R.h(context, 2)),
                     Text(
-                      'Paid by ${transaction.initiatedBy}',
+                      'by ${transaction.initiatedBy}  •  ${AppFormatters.formatDate(transaction.date)}',
                       style: AppTextStyles.bodySmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -314,20 +357,27 @@ class _ExpenseCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                AppFormatters.formatCurrency(transaction.amount),
-                style: AppTextStyles.moneyMedium.copyWith(
-                  color: AppColors.kExpense,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    AppFormatters.formatCurrency(transaction.amount),
+                    style: AppTextStyles.moneyMedium.copyWith(
+                      color: AppColors.kExpense,
+                    ),
+                  ),
+                  // Options button
+                  GestureDetector(
+                    onTap: () => _showExpenseOptions(context),
+                    child: Icon(
+                      CupertinoIcons.ellipsis,
+                      size: R.w(context, 16),
+                      color: AppColors.kTextHint,
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-
-          // ── Date ─────────────────────────────────────────────
-          Gap(R.h(context, 8)),
-          Text(
-            AppFormatters.formatDate(transaction.date),
-            style: AppTextStyles.bodySmall,
           ),
 
           // ── Split details ─────────────────────────────────────
@@ -335,9 +385,19 @@ class _ExpenseCard extends StatelessWidget {
             Gap(R.h(context, 12)),
             const Divider(height: 1, color: AppColors.kDivider),
             Gap(R.h(context, 10)),
-            Text(
-              'Split details',
-              style: AppTextStyles.labelMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Split details', style: AppTextStyles.labelMedium),
+                Text(
+                  '$paidCount/$totalCount paid',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: allPaid
+                        ? AppColors.kSuccess
+                        : AppColors.kTextHint,
+                  ),
+                ),
+              ],
             ),
             Gap(R.h(context, 8)),
             ...transaction.splitDetails.map(
@@ -353,9 +413,76 @@ class _ExpenseCard extends StatelessWidget {
       ),
     );
   }
+
+  void _showExpenseOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        margin: EdgeInsets.all(R.w(context, 16)),
+        decoration: const BoxDecoration(
+          color: AppColors.kCard,
+          borderRadius: AppRadius.modal,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Gap(R.h(context, 8)),
+            Container(
+              width: R.w(context, 40),
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.kBorder,
+                borderRadius: AppRadius.pill,
+              ),
+            ),
+            Gap(R.h(context, 16)),
+            ListTile(
+              leading: const Icon(
+                CupertinoIcons.pencil,
+                color: AppColors.kTextPrimary,
+              ),
+              title: Text('Edit Expense', style: AppTextStyles.bodyMedium),
+              onTap: () {
+                Get.back();
+                controller.startEditExpense(transaction, groupId);
+                Get.toNamed(
+                  AppRoutes.addGroupTransaction,
+                  arguments: {
+                    'groupId':    groupId,
+                    'groupTitle': transaction.description,
+                  },
+                );
+              },
+            ),
+            const Divider(height: 1, color: AppColors.kDivider),
+            ListTile(
+              leading: const Icon(
+                CupertinoIcons.trash,
+                color: AppColors.kError,
+              ),
+              title: Text(
+                'Delete Expense',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.kError,
+                ),
+              ),
+              onTap: () {
+                Get.back();
+                controller.deleteExpense(
+                  groupId:   groupId,
+                  expenseId: transaction.id,
+                );
+              },
+            ),
+            Gap(R.h(context, 16)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-/// Single split detail row with paid/unpaid status + mark as paid.
 class _SplitRow extends StatelessWidget {
   final SplitDetail split;
   final String groupId;
@@ -375,18 +502,17 @@ class _SplitRow extends StatelessWidget {
       padding: EdgeInsets.only(bottom: R.h(context, 8)),
       child: Row(
         children: [
-          // Status indicator
           Container(
             width:  R.w(context, 8),
             height: R.w(context, 8),
             decoration: BoxDecoration(
-              color: split.paid ? AppColors.kSuccess : AppColors.kWarning,
+              color: split.paid
+                  ? AppColors.kSuccess
+                  : AppColors.kWarning,
               shape: BoxShape.circle,
             ),
           ),
           Gap(R.w(context, 8)),
-
-          // Member email
           Expanded(
             child: Text(
               split.memberEmail,
@@ -395,21 +521,16 @@ class _SplitRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-
-          // Share amount
           Text(
             AppFormatters.formatCurrencyCompact(split.share),
             style: AppTextStyles.moneySmall,
           ),
-
           Gap(R.w(context, 8)),
-
-          // Paid / Mark paid button
           if (split.paid)
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: R.w(context, 8),
-                vertical: R.h(context, 3),
+                vertical:   R.h(context, 3),
               ),
               decoration: BoxDecoration(
                 color: AppColors.kSuccessBg,
@@ -432,7 +553,7 @@ class _SplitRow extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: R.w(context, 8),
-                  vertical: R.h(context, 3),
+                  vertical:   R.h(context, 3),
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.kPrimaryTint,
@@ -455,38 +576,37 @@ class _SplitRow extends StatelessWidget {
   }
 }
 
-/// Members tab — list of all group members.
 class _MembersTab extends StatelessWidget {
   final GroupModel group;
-
   const _MembersTab({required this.group});
 
   @override
   Widget build(BuildContext context) {
     if (group.members.isEmpty) {
       return Center(
-        child: Text(
-          'No members found',
-          style: AppTextStyles.bodyMedium,
-        ),
+        child: Text('No members found', style: AppTextStyles.bodyMedium),
       );
     }
 
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        R.h(context, 16),
-        AppSpacing.xxl,
-        100,
+        AppSpacing.xxl, R.h(context, 16), AppSpacing.xxl, 100,
       ),
       itemCount: group.members.length,
       separatorBuilder: (_, __) => Gap(R.h(context, 8)),
       itemBuilder: (_, i) {
-        final member  = group.members[i];
+        final member   = group.members[i];
         final initials = member.name.isNotEmpty
             ? member.name.trim().split(' ')
                 .map((w) => w[0]).take(2).join().toUpperCase()
             : '?';
+        const colors = [
+          AppColors.kPrimary,
+          AppColors.kInfo,
+          AppColors.kWarning,
+          AppColors.kCatEntertain,
+        ];
+        final color = colors[i % colors.length];
 
         return Container(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -498,20 +618,21 @@ class _MembersTab extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Avatar
               Container(
                 width:  R.w(context, 44),
                 height: R.w(context, 44),
-                decoration: const BoxDecoration(
-                  color: AppColors.kPrimaryLight,
-                  shape: BoxShape.circle,
+                decoration: BoxDecoration(
+                  color:  color.withValues(alpha: 0.12),
+                  shape:  BoxShape.circle,
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
                 ),
                 child: Center(
                   child: Text(
                     initials,
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: AppColors.kPrimary,
-                    ),
+                    style: AppTextStyles.labelLarge.copyWith(color: color),
                   ),
                 ),
               ),
@@ -539,7 +660,7 @@ class _MembersTab extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.person_rounded,
+                CupertinoIcons.person_fill,
                 color: AppColors.kTextHint,
                 size: R.w(context, 18),
               ),

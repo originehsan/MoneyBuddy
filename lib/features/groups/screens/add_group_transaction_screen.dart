@@ -1,5 +1,6 @@
 // MoneyBuddy
 import 'package:board_datetime_picker/board_datetime_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
@@ -23,9 +24,8 @@ class AddGroupTransactionScreen extends StatelessWidget {
     final groupTitle = Get.arguments?['groupTitle'] as String? ?? 'Group';
     final groupId = Get.arguments?['groupId'] as String? ?? '';
 
-    // Set selected group once after first frame — not on every rebuild
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (groupId.isNotEmpty) {
+      if (groupId.isNotEmpty && !controller.isExpenseEditMode.value) {
         controller.selectedGroupId.value = groupId;
       }
     });
@@ -34,7 +34,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
       backgroundColor: AppColors.kBackground,
       body: Column(
         children: [
-          // ── Emerald header ────────────────────────────────────
+          // ── Header ────────────────────────────────────────────
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -55,7 +55,10 @@ class AddGroupTransactionScreen extends StatelessWidget {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => Get.back(),
+                          onTap: () {
+                            controller.resetExpenseForm();
+                            Get.back();
+                          },
                           child: Container(
                             padding: EdgeInsets.all(R.w(context, 8)),
                             decoration: BoxDecoration(
@@ -63,19 +66,21 @@ class AddGroupTransactionScreen extends StatelessWidget {
                               borderRadius: AppRadius.tile,
                             ),
                             child: Icon(
-                              Icons.close_rounded,
+                              CupertinoIcons.xmark,
                               color: Colors.white,
                               size: R.w(context, 20),
                             ),
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          AppStrings.addExpense,
-                          style: AppTextStyles.headingSmall.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
+                        Obx(() => Text(
+                              controller.isExpenseEditMode.value
+                                  ? 'Edit Expense'
+                                  : AppStrings.addExpense,
+                              style: AppTextStyles.headingSmall.copyWith(
+                                color: Colors.white,
+                              ),
+                            )),
                         const Spacer(),
                         SizedBox(width: R.w(context, 36)),
                       ],
@@ -155,7 +160,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
                           child: Row(
                             children: [
                               Icon(
-                                Icons.calendar_today_rounded,
+                                CupertinoIcons.calendar,
                                 color: AppColors.kTextHint,
                                 size: R.w(context, 18),
                               ),
@@ -170,8 +175,10 @@ class AddGroupTransactionScreen extends StatelessWidget {
                       )).animate(delay: 50.ms).fadeIn(duration: 300.ms),
                   Gap(R.h(context, 28)),
                   Obx(() => PrimaryButton(
-                        text: AppStrings.addExpense,
-                        onPressed: controller.addGroupExpense,
+                        text: controller.isExpenseEditMode.value
+                            ? 'Update Expense'
+                            : AppStrings.addExpense,
+                        onPressed: controller.submitGroupExpense,
                         isLoading: controller.isExpenseSubmitting.value,
                       )).animate(delay: 100.ms).fadeIn(duration: 300.ms),
                 ],
@@ -199,10 +206,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
         ),
       ),
     );
-
-    if (date != null) {
-      controller.selectedDate.value = date;
-    }
+    if (date != null) controller.selectedDate.value = date;
   }
 
   String _formatDate(DateTime date) {
@@ -216,7 +220,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
   }
 
   String _timeString(DateTime date) {
-    final hour = date.hour > 12 ? date.hour - 12 : date.hour;
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $period';

@@ -1,5 +1,6 @@
 // MoneyBuddy
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
@@ -15,6 +16,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/feedback/error_widget.dart';
 import '../../../shared/widgets/feedback/shimmer_widget.dart';
 import '../controllers/analytics_controller.dart';
+import '../models/prediction_model.dart';
 
 class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
@@ -107,9 +109,24 @@ class AnalyticsScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Prediction card ──────────────────────────
+                  // ── Smart Insights ───────────────────────────
                   Obx(() {
-                    if (controller.prediction.value == null) {
+                    if (controller.smartInsights.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: AppSpacing.horizontalScreen,
+                      child: _SmartInsightsCard(controller: controller),
+                    ).animate(delay: 175.ms).fadeIn(duration: 300.ms);
+                  }),
+
+                  Gap(R.h(context, 20)),
+
+                  // ── Spending Forecast card ────────────────────
+                  // Only shown when prediction is reliable
+                  // (3+ days of data, not insufficient confidence)
+                  Obx(() {
+                    if (!controller.shouldShowPrediction) {
                       return const SizedBox.shrink();
                     }
                     return Padding(
@@ -141,16 +158,18 @@ class AnalyticsScreen extends StatelessWidget {
           ShimmerWidget(width: double.infinity, height: R.h(context, 180)),
           Gap(R.h(context, 20)),
           ShimmerWidget(width: double.infinity, height: R.h(context, 160)),
+          Gap(R.h(context, 20)),
+          ShimmerWidget(width: double.infinity, height: R.h(context, 140)),
         ],
       ),
     );
   }
 }
 
-/// Chart card — Obx wraps build content so it reacts to tab changes.
+// ── Chart Card ────────────────────────────────────────────────────
+
 class _ChartCard extends StatelessWidget {
   final AnalyticsController controller;
-
   const _ChartCard({required this.controller});
 
   @override
@@ -274,6 +293,8 @@ class _ChartCard extends StatelessWidget {
   }
 }
 
+// ── Summary Card ──────────────────────────────────────────────────
+
 class _SummaryCard extends StatelessWidget {
   final AnalyticsController controller;
   const _SummaryCard({required this.controller});
@@ -297,18 +318,18 @@ class _SummaryCard extends StatelessWidget {
           Text('Transaction Summary', style: AppTextStyles.headingSmall),
           Gap(R.h(context, 16)),
           _SummaryRow(
-            label: 'Total Saving',
-            value: AppFormatters.formatCurrency(controller.totalSaving),
+            label:      'Total Saving',
+            value:      AppFormatters.formatCurrency(controller.totalSaving),
             valueColor: AppColors.kIncome,
           ),
           _SummaryRow(
-            label: 'Total Income',
-            value: AppFormatters.formatCurrency(stats?.totalIncome ?? 0),
+            label:      'Total Income',
+            value:      AppFormatters.formatCurrency(stats?.totalIncome ?? 0),
             valueColor: AppColors.kIncome,
           ),
           _SummaryRow(
-            label: 'Total Expense',
-            value: AppFormatters.formatCurrency(stats?.totalExpense ?? 0),
+            label:      'Total Expense',
+            value:      AppFormatters.formatCurrency(stats?.totalExpense ?? 0),
             valueColor: AppColors.kExpense,
           ),
           _SummaryRow(
@@ -324,8 +345,8 @@ class _SummaryCard extends StatelessWidget {
             ),
           ),
           _SummaryRow(
-            label: 'Monthly avg spend',
-            value: AppFormatters.formatCurrencyCompact(
+            label:  'Monthly projection',
+            value:  AppFormatters.formatCurrencyCompact(
               stats?.averageMonthlyExpense ?? 0,
             ),
             isLast: true,
@@ -335,6 +356,113 @@ class _SummaryCard extends StatelessWidget {
     );
   }
 }
+
+// ── Smart Insights Card ───────────────────────────────────────────
+
+class _SmartInsightsCard extends StatelessWidget {
+  final AnalyticsController controller;
+  const _SmartInsightsCard({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.kCard,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.kBorder, width: 0.8),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                CupertinoIcons.lightbulb,
+                color: AppColors.kWarning,
+                size: 18,
+              ),
+              Gap(R.w(context, 8)),
+              Text('Smart Insights', style: AppTextStyles.headingSmall),
+            ],
+          ),
+          Gap(R.h(context, 12)),
+          ...controller.smartInsights.map(
+            (insight) => _InsightRow(insight: insight),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightRow extends StatelessWidget {
+  final SmartInsight insight;
+  const _InsightRow({required this.insight});
+
+  IconData get _icon {
+    switch (insight.title) {
+      case String t when t.contains('up'):
+        return CupertinoIcons.arrow_up_circle;
+      case String t when t.contains('saving') || t.contains('less'):
+        return CupertinoIcons.arrow_down_circle;
+      case String t when t.contains('top'):
+        return CupertinoIcons.star;
+      case String t when t.contains('projection'):
+        return CupertinoIcons.calendar;
+      default:
+        return CupertinoIcons.chart_bar;
+    }
+  }
+
+  Color get _iconColor => insight.isWarning
+      ? AppColors.kWarning
+      : AppColors.kSuccess;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: R.h(context, 12)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(R.w(context, 6)),
+            decoration: BoxDecoration(
+              color: insight.isWarning
+                  ? AppColors.kWarningBg
+                  : AppColors.kSuccessBg,
+              borderRadius: AppRadius.tile,
+            ),
+            child: Icon(
+              _icon,
+              color: _iconColor,
+              size: R.w(context, 16),
+            ),
+          ),
+          Gap(R.w(context, 10)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(insight.title, style: AppTextStyles.labelLarge),
+                Gap(R.h(context, 2)),
+                Text(
+                  insight.description,
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Prediction Card ───────────────────────────────────────────────
 
 class _PredictionCard extends StatelessWidget {
   final AnalyticsController controller;
@@ -355,27 +483,54 @@ class _PredictionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
+          // ── Title row ───────────────────────────────────────
           Row(
             children: [
-              const Icon(Icons.auto_graph_rounded, color: Colors.white, size: 20),
+              const Icon(
+                CupertinoIcons.waveform_path_ecg,
+                color: Colors.white,
+                size: 20,
+              ),
               Gap(R.w(context, 8)),
               Text(
-                AppStrings.prediction,
-                style: AppTextStyles.headingSmall.copyWith(color: Colors.white),
+                'Spending Forecast',
+                style: AppTextStyles.headingSmall.copyWith(
+                  color: Colors.white,
+                ),
               ),
+              const Spacer(),
+              // Confidence badge
+              _ConfidenceBadge(confidence: p.confidence),
             ],
           ),
+
+          Gap(R.h(context, 4)),
+
+          // ── Subtitle — based on X days ───────────────────────
+          Text(
+            controller.predictionSubtitle,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: Colors.white60,
+            ),
+          ),
+
           Gap(R.h(context, 16)),
+
+          // ── Prediction rows ──────────────────────────────────
           _PredictionRow(
-            label: AppStrings.nextDay,
+            icon:  CupertinoIcons.sun_max,
+            label: 'Tomorrow',
             value: AppFormatters.formatCurrency(p.nextDaySum),
           ),
           _PredictionRow(
-            label: AppStrings.nextWeek,
+            icon:  CupertinoIcons.calendar_today,
+            label: 'Next 7 days',
             value: AppFormatters.formatCurrency(p.nextWeekSum),
           ),
           _PredictionRow(
-            label: AppStrings.nextMonth,
+            icon:  CupertinoIcons.calendar,
+            label: 'Next 30 days',
             value: AppFormatters.formatCurrency(p.nextMonthSum),
             isLast: true,
           ),
@@ -384,6 +539,67 @@ class _PredictionCard extends StatelessWidget {
     );
   }
 }
+
+class _ConfidenceBadge extends StatelessWidget {
+  final PredictionConfidence confidence;
+  const _ConfidenceBadge({required this.confidence});
+
+  Color get _color {
+    switch (confidence) {
+      case PredictionConfidence.high:   return const Color(0xFF22C55E);
+      case PredictionConfidence.medium: return const Color(0xFFF59E0B);
+      case PredictionConfidence.low:    return const Color(0xFFFF6B35);
+      default:                          return Colors.white38;
+    }
+  }
+
+  String get _label {
+    switch (confidence) {
+      case PredictionConfidence.high:   return 'High';
+      case PredictionConfidence.medium: return 'Medium';
+      case PredictionConfidence.low:    return 'Low';
+      default:                          return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: AppRadius.pill,
+        border: Border.all(
+          color: _color.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: _color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: Colors.white,
+              fontSize: 9,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Shared Row Widgets ────────────────────────────────────────────
 
 class _SummaryRow extends StatelessWidget {
   final String label;
@@ -424,11 +640,13 @@ class _SummaryRow extends StatelessWidget {
 }
 
 class _PredictionRow extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
   final bool isLast;
 
   const _PredictionRow({
+    required this.icon,
     required this.label,
     required this.value,
     this.isLast = false,
@@ -441,25 +659,37 @@ class _PredictionRow extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(vertical: R.h(context, 10)),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: AppTextStyles.bodyMedium.copyWith(color: Colors.white70),
+              Icon(icon, color: Colors.white60, size: R.w(context, 16)),
+              Gap(R.w(context, 8)),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
               ),
               Text(
                 value,
-                style: AppTextStyles.moneyMedium.copyWith(color: Colors.white),
+                style: AppTextStyles.moneyMedium.copyWith(
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
         ),
         if (!isLast)
-          Divider(height: 1, color: Colors.white.withValues(alpha: 0.2)),
+          Divider(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
       ],
     );
   }
 }
+
+// ── Tab Button ────────────────────────────────────────────────────
 
 class _TabButton extends StatelessWidget {
   final String label;
@@ -493,7 +723,9 @@ class _TabButton extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: isActive
-                ? AppTextStyles.labelLarge.copyWith(color: AppColors.kPrimary)
+                ? AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.kPrimary,
+                  )
                 : AppTextStyles.labelMedium,
           ),
         ),

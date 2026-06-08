@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/group_model.dart';
 
 /// Handles all group Firestore operations.
-/// Collection: groups/{groupId}
+/// Structure: groups/{groupId}/expenses/{expenseId}
 class GroupService {
   final _firestore = FirebaseFirestore.instance;
   final _auth      = FirebaseAuth.instance;
@@ -15,19 +15,42 @@ class GroupService {
   CollectionReference get _groupsCollection =>
       _firestore.collection('groups');
 
-  // ── Get groups ────────────────────────────────────────────────
+  // ── Get all groups ────────────────────────────────────────────
+  // Fetches groups where user is creator OR member
 
-  /// Fetches all groups where current user is creator or member.
   Future<List<GroupModel>> getGroups() async {
     try {
-      final snapshot = await _groupsCollection
+      // Groups created by user
+      final createdSnap = await _groupsCollection
           .where('createdBy', isEqualTo: _uid)
           .get();
 
-      return snapshot.docs
-          .map((doc) => GroupModel.fromFirestore(doc))
-          .toList();
-    } catch (e) {
+      // Groups where user is a member (by email)
+      final memberSnap = await _groupsCollection
+          .where('members', arrayContains: _email)
+          .get();
+
+      // Merge and deduplicate by doc ID
+      final allDocs = <String, DocumentSnapshot>{};
+      for (final doc in [...createdSnap.docs, ...memberSnap.docs]) {
+        allDocs[doc.id] = doc;
+      }
+
+      // Fetch expenses for each group
+      final groups = <GroupModel>[];
+      for (final doc in allDocs.values) {
+        final expensesSnap = await _groupsCollection
+            .doc(doc.id)
+            .collection('expenses')
+            .orderBy('date', descending: true)
+            .get();
+        groups.add(
+          GroupModel.fromFirestoreWithExpenses(doc, expensesSnap.docs),
+        );
+      }
+
+      return groups;
+    } catch (_) {
       return [];
     }
   }
@@ -40,16 +63,62 @@ class GroupService {
     required List<String> members,
   }) async {
     try {
+      // Always include creator email in members list
+      final allMembers = [_email, ...members.where((m) => m != _email)];
       await _groupsCollection.add({
-        'title':       title,
-        'description': description,
-        'createdBy':   _uid,
+        'title':        title,
+        'description':  description,
+        'createdBy':    _uid,
         'creatorEmail': _email,
-        'members':     members,
-        'createdAt':   FieldValue.serverTimestamp(),
+        'members':      allMembers,
+        'createdAt':    FieldValue.serverTimestamp(),
       });
       return true;
-    } catch (e) {
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Update group ──────────────────────────────────────────────
+
+  Future<bool> updateGroup({
+    required String groupId,
+    required String title,
+    required String description,
+    required List<String> members,
+  }) async {
+    try {
+      final allMembers = [_email, ...members.where((m) => m != _email)];
+      await _groupsCollection.doc(groupId).update({
+        'title':       title,
+        'description': description,
+        'members':     allMembers,
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Delete group ──────────────────────────────────────────────
+  // Deletes group + all its expenses (Firestore subcollection cleanup)
+
+  Future<bool> deleteGroup(String groupId) async {
+    try {
+      // Delete all expenses first
+      final expensesSnap = await _groupsCollection
+          .doc(groupId)
+          .collection('expenses')
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in expensesSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_groupsCollection.doc(groupId));
+      await batch.commit();
+      return true;
+    } catch (_) {
       return false;
     }
   }
@@ -63,57 +132,105 @@ class GroupService {
     required String date,
   }) async {
     try {
-      // Get group members for split calculation
       final groupDoc = await _groupsCollection.doc(groupId).get();
-      final members  = List<String>.from(
-        (groupDoc.data() as Map<String, dynamic>)['members'] ?? [],
-      );
+      final data     = groupDoc.data() as Map<String, dynamic>;
+      final members  = List<String>.from(data['members'] ?? []);
 
-      // Calculate equal split excluding initiator
-      final otherMembers = members
-          .where((m) => m != _email)
-          .toList();
-      final share = otherMembers.isEmpty
-          ? amount
-          : amount / (otherMembers.length + 1);
+      // Split equally among all members including initiator
+      final share = members.isEmpty ? amount : amount / members.length;
 
-      final splitDetails = otherMembers.map((memberEmail) => {
+      final splitDetails = members.map((memberEmail) => {
         'memberEmail': memberEmail,
         'share':       share,
-        'paid':        false,
+        'paid':        memberEmail == _email, // initiator auto-marked paid
       }).toList();
 
       await _groupsCollection
           .doc(groupId)
           .collection('expenses')
           .add({
-        'description':   description,
-        'amount':        amount,
-        'date':          Timestamp.fromDate(DateTime.parse(date)),
-        'initiatedBy':   _email,
-        'splitDetails':  splitDetails,
-        'createdAt':     FieldValue.serverTimestamp(),
+        'description':  description,
+        'amount':       amount,
+        'date':         Timestamp.fromDate(DateTime.parse(date)),
+        'initiatedBy':  _email,
+        'splitDetails': splitDetails,
+        'createdAt':    FieldValue.serverTimestamp(),
       });
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
-  // ── Get group with expenses ───────────────────────────────────
+  // ── Update expense ────────────────────────────────────────────
 
-  Future<GroupModel?> getGroupById(String groupId) async {
+  Future<bool> updateGroupExpense({
+    required String groupId,
+    required String expenseId,
+    required String description,
+    required double amount,
+    required String date,
+  }) async {
     try {
-      final groupDoc     = await _groupsCollection.doc(groupId).get();
-      final expensesSnap = await _groupsCollection
+      final groupDoc = await _groupsCollection.doc(groupId).get();
+      final data     = groupDoc.data() as Map<String, dynamic>;
+      final members  = List<String>.from(data['members'] ?? []);
+
+      final share = members.isEmpty ? amount : amount / members.length;
+
+      // Recalculate splits preserving paid status
+      final expenseDoc = await _groupsCollection
           .doc(groupId)
           .collection('expenses')
-          .orderBy('date', descending: true)
+          .doc(expenseId)
           .get();
 
-      return GroupModel.fromFirestoreWithExpenses(groupDoc, expensesSnap.docs);
-    } catch (e) {
-      return null;
+      final oldSplits = List<Map<String, dynamic>>.from(
+        (expenseDoc.data() as Map<String, dynamic>)['splitDetails'] ?? [],
+      );
+
+      final oldPaidMap = {
+        for (final s in oldSplits)
+          s['memberEmail'] as String: s['paid'] as bool,
+      };
+
+      final newSplits = members.map((memberEmail) => {
+        'memberEmail': memberEmail,
+        'share':       share,
+        'paid':        oldPaidMap[memberEmail] ?? (memberEmail == _email),
+      }).toList();
+
+      await _groupsCollection
+          .doc(groupId)
+          .collection('expenses')
+          .doc(expenseId)
+          .update({
+        'description':  description,
+        'amount':       amount,
+        'date':         Timestamp.fromDate(DateTime.parse(date)),
+        'splitDetails': newSplits,
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Delete expense ────────────────────────────────────────────
+
+  Future<bool> deleteExpense({
+    required String groupId,
+    required String expenseId,
+  }) async {
+    try {
+      await _groupsCollection
+          .doc(groupId)
+          .collection('expenses')
+          .doc(expenseId)
+          .delete();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -136,7 +253,6 @@ class GroupService {
         data['splitDetails'] ?? [],
       );
 
-      // Update paid status for this member
       final updated = splits.map((split) {
         if (split['memberEmail'] == memberEmail) {
           return {...split, 'paid': true};
@@ -146,8 +262,24 @@ class GroupService {
 
       await expenseRef.update({'splitDetails': updated});
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
+    }
+  }
+
+  // ── Get group by ID ───────────────────────────────────────────
+
+  Future<GroupModel?> getGroupById(String groupId) async {
+    try {
+      final groupDoc     = await _groupsCollection.doc(groupId).get();
+      final expensesSnap = await _groupsCollection
+          .doc(groupId)
+          .collection('expenses')
+          .orderBy('date', descending: true)
+          .get();
+      return GroupModel.fromFirestoreWithExpenses(groupDoc, expensesSnap.docs);
+    } catch (_) {
+      return null;
     }
   }
 }

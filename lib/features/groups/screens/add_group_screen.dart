@@ -1,4 +1,5 @@
 // MoneyBuddy
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
@@ -25,17 +26,13 @@ class AddGroupScreen extends StatelessWidget {
       backgroundColor: AppColors.kBackground,
       body: Column(
         children: [
-          // ── Emerald header ────────────────────────────────────
+          // ── Header ────────────────────────────────────────────
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF059669), Color(0xFF047857)],
-              ),
+              gradient: AppColors.kBalanceGradient,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(AppRadius.xxl),
+                bottomLeft:  Radius.circular(AppRadius.xxl),
                 bottomRight: Radius.circular(AppRadius.xxl),
               ),
             ),
@@ -51,7 +48,10 @@ class AddGroupScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: () => Get.back(),
+                      onTap: () {
+                        controller.resetGroupForm();
+                        Get.back();
+                      },
                       child: Container(
                         padding: EdgeInsets.all(R.w(context, 8)),
                         decoration: BoxDecoration(
@@ -59,19 +59,21 @@ class AddGroupScreen extends StatelessWidget {
                           borderRadius: AppRadius.tile,
                         ),
                         child: Icon(
-                          Icons.close_rounded,
+                          CupertinoIcons.xmark,
                           color: Colors.white,
                           size: R.w(context, 20),
                         ),
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      AppStrings.addGroup,
-                      style: AppTextStyles.headingSmall.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
+                    Obx(() => Text(
+                          controller.isEditMode.value
+                              ? 'Edit Group'
+                              : AppStrings.addGroup,
+                          style: AppTextStyles.headingSmall.copyWith(
+                            color: Colors.white,
+                          ),
+                        )),
                     const Spacer(),
                     SizedBox(width: R.w(context, 36)),
                   ],
@@ -92,9 +94,10 @@ class AddGroupScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
                   AppTextField(
                     label: AppStrings.groupName,
-                    hint: 'Enter group name',
+                    hint:  'e.g. Goa Trip, Office Lunch',
                     controller: controller.titleController,
                   ).animate().fadeIn(duration: 300.ms),
 
@@ -102,13 +105,18 @@ class AddGroupScreen extends StatelessWidget {
 
                   AppTextField(
                     label: AppStrings.groupDesc,
-                    hint: 'What is this group for?',
+                    hint:  'What is this group for?',
                     controller: controller.descController,
                   ).animate(delay: 50.ms).fadeIn(duration: 300.ms),
 
                   Gap(R.h(context, 20)),
 
                   Text(AppStrings.members, style: AppTextStyles.inputLabel),
+                  Gap(R.h(context, 6)),
+                  Text(
+                    'Enter email addresses of members',
+                    style: AppTextStyles.bodySmall,
+                  ),
                   Gap(R.h(context, 10)),
 
                   // Dynamic member fields
@@ -122,25 +130,27 @@ class AddGroupScreen extends StatelessWidget {
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Member ${i + 1}',
-                                    hint: 'Enter email or name',
-                                    controller: controller.memberControllers[i],
+                                    hint:  'email@example.com',
+                                    controller:
+                                        controller.memberControllers[i],
+                                    keyboardType:
+                                        TextInputType.emailAddress,
                                   ),
                                 ),
-                                if (controller.memberControllers.length >
-                                    1) ...[
+                                if (controller.memberControllers.length > 1) ...[
                                   Gap(R.w(context, 8)),
                                   GestureDetector(
                                     onTap: () => controller.removeMember(i),
                                     child: Container(
-                                      padding: EdgeInsets.all(R.w(context, 8)),
+                                      padding: EdgeInsets.all(R.w(context, 10)),
                                       decoration: const BoxDecoration(
                                         color: AppColors.kErrorBg,
                                         borderRadius: AppRadius.tile,
                                       ),
                                       child: Icon(
-                                        Icons.remove_rounded,
+                                        CupertinoIcons.minus,
                                         color: AppColors.kError,
-                                        size: R.w(context, 18),
+                                        size: R.w(context, 16),
                                       ),
                                     ),
                                   ),
@@ -152,7 +162,7 @@ class AddGroupScreen extends StatelessWidget {
                       )),
 
                   // Add member button
-                  Obx(() => controller.memberControllers.length < 4
+                  Obx(() => controller.memberControllers.length < 10
                       ? GestureDetector(
                           onTap: controller.addMember,
                           child: Container(
@@ -164,17 +174,18 @@ class AddGroupScreen extends StatelessWidget {
                               color: AppColors.kPrimaryTint,
                               borderRadius: AppRadius.input,
                               border: Border.all(
-                                color:
-                                    AppColors.kPrimary.withValues(alpha: 0.3),
+                                color: AppColors.kPrimary.withValues(
+                                  alpha: 0.3,
+                                ),
                               ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.add_rounded,
+                                  CupertinoIcons.add,
                                   color: AppColors.kPrimary,
-                                  size: R.w(context, 18),
+                                  size: R.w(context, 16),
                                 ),
                                 Gap(R.w(context, 6)),
                                 Text(
@@ -189,21 +200,25 @@ class AddGroupScreen extends StatelessWidget {
 
                   Gap(R.h(context, 28)),
 
-                  // Buttons row
                   Row(
                     children: [
                       Expanded(
                         child: SecondaryButton(
                           text: AppStrings.cancel,
-                          onPressed: () => Get.back(),
+                          onPressed: () {
+                            controller.resetGroupForm();
+                            Get.back();
+                          },
                         ),
                       ),
                       Gap(R.w(context, 12)),
                       Expanded(
                         child: Obx(() => PrimaryButton(
-                              text: AppStrings.save,
-                              onPressed: controller.createGroup,
-                              isLoading: controller.isSubmitting.value,
+                              text: controller.isEditMode.value
+                                  ? AppStrings.save
+                                  : 'Create Group',
+                              onPressed:  controller.submitGroup,
+                              isLoading:  controller.isSubmitting.value,
                             )),
                       ),
                     ],

@@ -1,4 +1,5 @@
 // MoneyBuddy
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
@@ -55,7 +56,10 @@ class GroupScreen extends StatelessWidget {
                           style: AppTextStyles.headingLarge,
                         ),
                         GestureDetector(
-                          onTap: () => Get.toNamed(AppRoutes.addGroup),
+                          onTap: () {
+                            controller.resetGroupForm();
+                            Get.toNamed(AppRoutes.addGroup);
+                          },
                           child: Container(
                             padding: EdgeInsets.all(R.w(context, 8)),
                             decoration: const BoxDecoration(
@@ -63,7 +67,7 @@ class GroupScreen extends StatelessWidget {
                               borderRadius: AppRadius.tile,
                             ),
                             child: Icon(
-                              Icons.add_rounded,
+                              CupertinoIcons.add,
                               color: AppColors.kPrimary,
                               size: R.w(context, 20),
                             ),
@@ -74,21 +78,21 @@ class GroupScreen extends StatelessWidget {
                   ),
                 ),
 
-                // ── Group list or empty ──────────────────────────
                 controller.groups.isEmpty
                     ? SliverFillRemaining(
                         child: EmptyState(
-                          icon: Icons.group_rounded,
+                          icon: CupertinoIcons.person_3,
                           title: AppStrings.noGroups,
                           subtitle: AppStrings.noGroupsDesc,
                           buttonText: AppStrings.createGroup,
-                          onButtonPressed: () =>
-                              Get.toNamed(AppRoutes.addGroup),
+                          onButtonPressed: () {
+                            controller.resetGroupForm();
+                            Get.toNamed(AppRoutes.addGroup);
+                          },
                         ),
                       )
                     : SliverPadding(
-                        padding:
-                            AppSpacing.horizontalScreen.copyWith(top: 20),
+                        padding: AppSpacing.horizontalScreen.copyWith(top: 20),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (_, i) => Padding(
@@ -96,8 +100,8 @@ class GroupScreen extends StatelessWidget {
                                 bottom: R.h(context, 12),
                               ),
                               child: _GroupCard(
-                                group: controller.groups[i],
-                                index: i,
+                                group:      controller.groups[i],
+                                index:      i,
                                 controller: controller,
                               ),
                             ),
@@ -123,7 +127,7 @@ class GroupScreen extends StatelessWidget {
             padding: EdgeInsets.only(bottom: R.h(context, 12)),
             child: ShimmerWidget(
               width: double.infinity,
-              height: R.h(context, 120),
+              height: R.h(context, 130),
             ),
           ),
         ),
@@ -149,9 +153,19 @@ class _GroupCard extends StatelessWidget {
       0, (sum, t) => sum + t.amount,
     );
 
+    // Paid/unpaid progress
+    int totalSplits = 0;
+    int paidSplits  = 0;
+    for (final tx in group.transactions) {
+      totalSplits += tx.splitDetails.length;
+      paidSplits  += tx.splitDetails.where((s) => s.paid).length;
+    }
+    final paidPercent = totalSplits > 0
+        ? paidSplits / totalSplits
+        : 0.0;
+
     return GestureDetector(
       onTap: () {
-        // Set selected group and navigate to detail
         controller.selectedGroupId.value = group.id;
         Get.toNamed(
           AppRoutes.groupDetail,
@@ -173,18 +187,21 @@ class _GroupCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            // ── Title row ──────────────────────────────────────
             Row(
               children: [
+                // Group icon
                 Container(
                   width:  R.w(context, 44),
                   height: R.w(context, 44),
                   decoration: const BoxDecoration(
-                    color: AppColors.kPrimaryTint,
+                    gradient: AppColors.kBalanceGradient,
                     borderRadius: AppRadius.tile,
                   ),
                   child: Icon(
-                    Icons.group_rounded,
-                    color: AppColors.kPrimary,
+                    CupertinoIcons.person_3_fill,
+                    color: Colors.white,
                     size: R.w(context, 20),
                   ),
                 ),
@@ -209,6 +226,7 @@ class _GroupCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Total + options
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -219,9 +237,14 @@ class _GroupCard extends StatelessWidget {
                       ),
                     ),
                     Gap(R.h(context, 2)),
-                    Text(
-                      'total',
-                      style: AppTextStyles.labelSmall,
+                    // 3-dot menu
+                    GestureDetector(
+                      onTap: () => _showOptions(context),
+                      child: Icon(
+                        CupertinoIcons.ellipsis,
+                        size: R.w(context, 18),
+                        color: AppColors.kTextHint,
+                      ),
                     ),
                   ],
                 ),
@@ -229,25 +252,60 @@ class _GroupCard extends StatelessWidget {
             ),
 
             Gap(R.h(context, 12)),
+
+            // ── Member avatar stack ────────────────────────────
+            _MemberAvatarStack(
+              members: group.members,
+              context: context,
+            ),
+
+            Gap(R.h(context, 12)),
+
+            // ── Paid progress bar ──────────────────────────────
+            if (totalSplits > 0) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '$paidSplits/$totalSplits settled',
+                    style: AppTextStyles.labelSmall,
+                  ),
+                  Text(
+                    '${(paidPercent * 100).toStringAsFixed(0)}%',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: paidPercent >= 1.0
+                          ? AppColors.kSuccess
+                          : AppColors.kPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Gap(R.h(context, 6)),
+              ClipRRect(
+                borderRadius: AppRadius.pill,
+                child: LinearProgressIndicator(
+                  value: paidPercent,
+                  minHeight: 5,
+                  backgroundColor: AppColors.kSurface,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    paidPercent >= 1.0
+                        ? AppColors.kSuccess
+                        : AppColors.kPrimary,
+                  ),
+                ),
+              ),
+              Gap(R.h(context, 12)),
+            ],
+
             const Divider(height: 1, color: AppColors.kDivider),
             Gap(R.h(context, 10)),
 
+            // ── Footer row ─────────────────────────────────────
             Row(
               children: [
                 Icon(
-                  Icons.people_rounded,
-                  size: R.w(context, 14),
-                  color: AppColors.kTextHint,
-                ),
-                Gap(R.w(context, 4)),
-                Text(
-                  '${group.members.length} members',
-                  style: AppTextStyles.labelSmall,
-                ),
-                Gap(R.w(context, 16)),
-                Icon(
-                  Icons.receipt_long_rounded,
-                  size: R.w(context, 14),
+                  CupertinoIcons.doc_text,
+                  size: R.w(context, 13),
                   color: AppColors.kTextHint,
                 ),
                 Gap(R.w(context, 4)),
@@ -256,28 +314,33 @@ class _GroupCard extends StatelessWidget {
                   style: AppTextStyles.labelSmall,
                 ),
                 const Spacer(),
-                // Add expense quick action
+                // Quick add expense
                 GestureDetector(
-                  onTap: () => Get.toNamed(
-                    AppRoutes.addGroupTransaction,
-                    arguments: {
-                      'groupId':    group.id,
-                      'groupTitle': group.title,
-                    },
-                  ),
+                  onTap: () {
+                    controller.resetExpenseForm();
+                    controller.selectedGroupId.value = group.id;
+                    Get.toNamed(
+                      AppRoutes.addGroupTransaction,
+                      arguments: {
+                        'groupId':    group.id,
+                        'groupTitle': group.title,
+                      },
+                    );
+                  },
                   child: Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: R.w(context, 10),
-                      vertical: R.h(context, 4),
+                      vertical:   R.h(context, 4),
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.kPrimaryTint,
                       borderRadius: AppRadius.pill,
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.add_rounded,
+                          CupertinoIcons.add,
                           size: R.w(context, 12),
                           color: AppColors.kPrimary,
                         ),
@@ -300,6 +363,174 @@ class _GroupCard extends StatelessWidget {
           .animate(delay: Duration(milliseconds: index * 80))
           .fadeIn(duration: 300.ms)
           .slideY(begin: 0.1, end: 0),
+    );
+  }
+
+  void _showOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        margin: EdgeInsets.all(R.w(context, 16)),
+        decoration: const BoxDecoration(
+          color: AppColors.kCard,
+          borderRadius: AppRadius.modal,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Gap(R.h(context, 8)),
+            Container(
+              width: R.w(context, 40),
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.kBorder,
+                borderRadius: AppRadius.pill,
+              ),
+            ),
+            Gap(R.h(context, 16)),
+            // Edit
+            ListTile(
+              leading: const Icon(
+                CupertinoIcons.pencil,
+                color: AppColors.kTextPrimary,
+              ),
+              title: Text('Edit Group', style: AppTextStyles.bodyMedium),
+              onTap: () {
+                Get.back();
+                controller.startEditGroup(group);
+                Get.toNamed(AppRoutes.addGroup);
+              },
+            ),
+            const Divider(height: 1, color: AppColors.kDivider),
+            // Delete
+            ListTile(
+              leading: const Icon(
+                CupertinoIcons.trash,
+                color: AppColors.kError,
+              ),
+              title: Text(
+                'Delete Group',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.kError,
+                ),
+              ),
+              onTap: () {
+                Get.back();
+                _confirmDelete(context);
+              },
+            ),
+            Gap(R.h(context, 16)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.card,
+        ),
+        title: Text('Delete Group', style: AppTextStyles.headingSmall),
+        content: Text(
+          'This will delete the group and all its expenses. This cannot be undone.',
+          style: AppTextStyles.bodySmall,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel', style: AppTextStyles.buttonSmall),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.deleteGroup(group.id);
+            },
+            child: Text(
+              'Delete',
+              style: AppTextStyles.buttonSmall.copyWith(
+                color: AppColors.kError,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Stacked member avatars — shows up to 3 then "+N more"
+class _MemberAvatarStack extends StatelessWidget {
+  final List<GroupMember> members;
+  final BuildContext context;
+
+  const _MemberAvatarStack({
+    required this.members,
+    required this.context,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = members.take(3).toList();
+    final extra   = members.length - visible.length;
+    const colors  = [
+      AppColors.kPrimary,
+      AppColors.kInfo,
+      AppColors.kWarning,
+    ];
+
+    return Row(
+      children: [
+        SizedBox(
+          width: R.w(context, 20.0 * visible.length + 10),
+          height: R.w(context, 28),
+          child: Stack(
+            children: visible.asMap().entries.map((e) {
+              final initials = e.value.name.isNotEmpty
+                  ? e.value.name.trim().split(' ')
+                      .map((w) => w[0]).take(1).join().toUpperCase()
+                  : '?';
+              return Positioned(
+                left: e.key * R.w(context, 20),
+                child: Container(
+                  width:  R.w(context, 28),
+                  height: R.w(context, 28),
+                  decoration: BoxDecoration(
+                    color:  colors[e.key % colors.length].withValues(alpha: 0.15),
+                    shape:  BoxShape.circle,
+                    border: Border.all(color: AppColors.kCard, width: 1.5),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color:      colors[e.key % colors.length],
+                        fontSize:   9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        if (extra > 0) ...[
+          Gap(R.w(context, 4)),
+          Text(
+            '+$extra more',
+            style: AppTextStyles.labelSmall,
+          ),
+        ],
+        const Spacer(),
+        Text(
+          '${members.length} members',
+          style: AppTextStyles.labelSmall,
+        ),
+      ],
     );
   }
 }

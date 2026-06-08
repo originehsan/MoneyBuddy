@@ -5,27 +5,35 @@ import '../../../core/constants/app_colors.dart';
 import '../models/group_model.dart';
 import '../services/group_service.dart';
 
-/// Manages group list, create group form, and add expense form state.
+/// Manages all group state — list, create, edit, delete,
+/// expenses CRUD, mark as paid.
 class GroupController extends GetxController {
   final _service = GroupService();
 
+  // ── List state ────────────────────────────────────────────────
   final isLoading    = true.obs;
   final groups       = <GroupModel>[].obs;
   final errorMessage = ''.obs;
 
+  // ── Group form state ──────────────────────────────────────────
   final titleController = TextEditingController();
   final descController  = TextEditingController();
   final isSubmitting    = false.obs;
+  final isEditMode      = false.obs;
+  final editingGroupId  = ''.obs;
 
   final memberControllers = <TextEditingController>[
     TextEditingController(),
   ].obs;
 
+  // ── Expense form state ────────────────────────────────────────
   final expenseAmountController = TextEditingController();
   final expenseDescController   = TextEditingController();
   final selectedDate            = DateTime.now().obs;
   final selectedGroupId         = ''.obs;
   final isExpenseSubmitting     = false.obs;
+  final isExpenseEditMode       = false.obs;
+  final editingExpenseId        = ''.obs;
 
   @override
   void onInit() {
@@ -33,15 +41,14 @@ class GroupController extends GetxController {
     loadGroups();
   }
 
+  // ── Load ──────────────────────────────────────────────────────
+
   Future<void> loadGroups() async {
     isLoading.value    = true;
     errorMessage.value = '';
     try {
       final list = await _service.getGroups();
       groups.value = list;
-      if (list.isNotEmpty) {
-        selectedGroupId.value = list.first.id;
-      }
     } catch (e) {
       errorMessage.value = e.toString();
     } finally {
@@ -49,8 +56,10 @@ class GroupController extends GetxController {
     }
   }
 
+  // ── Member field management ───────────────────────────────────
+
   void addMember() {
-    if (memberControllers.length < 4) {
+    if (memberControllers.length < 10) {
       memberControllers.add(TextEditingController());
     }
   }
@@ -62,7 +71,33 @@ class GroupController extends GetxController {
     }
   }
 
-  Future<void> createGroup() async {
+  // ── Start edit group — pre-fill form ─────────────────────────
+
+  void startEditGroup(GroupModel group) {
+    isEditMode.value     = true;
+    editingGroupId.value = group.id;
+    titleController.text = group.title;
+    descController.text  = group.description;
+
+    // Pre-fill member controllers (excluding creator email)
+    for (final c in memberControllers) { c.dispose(); }
+    final otherMembers = group.members
+        .where((m) => m.email != group.members.first.email)
+        .map((m) => m.email)
+        .toList();
+
+    if (otherMembers.isEmpty) {
+      memberControllers.assignAll([TextEditingController()]);
+    } else {
+      memberControllers.assignAll(
+        otherMembers.map((e) => TextEditingController(text: e)).toList(),
+      );
+    }
+  }
+
+  // ── Create or Update group ────────────────────────────────────
+
+  Future<void> submitGroup() async {
     final title       = titleController.text.trim();
     final description = descController.text.trim();
     final members     = memberControllers
@@ -70,25 +105,38 @@ class GroupController extends GetxController {
         .where((m) => m.isNotEmpty)
         .toList();
 
-    if (title.isEmpty || description.isEmpty || members.isEmpty) {
-      _showError('Please fill all fields'); return;
-    }
+    if (title.isEmpty) { _showError('Enter a group name'); return; }
+    if (description.isEmpty) { _showError('Enter a description'); return; }
+    if (members.isEmpty) { _showError('Add at least one member'); return; }
 
     isSubmitting.value = true;
     try {
-      final success = await _service.createGroup(
-        title:       title,
-        description: description,
-        members:     members,
-      );
+      bool success;
+      if (isEditMode.value) {
+        success = await _service.updateGroup(
+          groupId:     editingGroupId.value,
+          title:       title,
+          description: description,
+          members:     members,
+        );
+        if (success) _showSuccess('Group updated');
+      } else {
+        success = await _service.createGroup(
+          title:       title,
+          description: description,
+          members:     members,
+        );
+        if (success) _showSuccess('Group created');
+      }
 
       if (success) {
-        _showSuccess('Group created successfully');
         await loadGroups();
         Get.back();
-        _resetCreateForm();
+        _resetGroupForm();
       } else {
-        _showError('Failed to create group');
+        _showError(isEditMode.value
+            ? 'Failed to update group'
+            : 'Failed to create group');
       }
     } catch (e) {
       _showError(e.toString());
@@ -97,15 +145,38 @@ class GroupController extends GetxController {
     }
   }
 
-  void _resetCreateForm() {
-    titleController.clear();
-    descController.clear();
-    for (final c in memberControllers) { c.dispose(); }
-    memberControllers.assignAll([TextEditingController()]);
+  // ── Delete group ──────────────────────────────────────────────
+
+  Future<void> deleteGroup(String groupId) async {
+    try {
+      final success = await _service.deleteGroup(groupId);
+      if (success) {
+        groups.removeWhere((g) => g.id == groupId);
+        _showSuccess('Group deleted');
+      } else {
+        _showError('Failed to delete group');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
   }
 
-  Future<void> addGroupExpense() async {
-    final amount      = double.tryParse(expenseAmountController.text.trim());
+  // ── Start edit expense ────────────────────────────────────────
+
+  void startEditExpense(GroupTransaction expense, String groupId) {
+    isExpenseEditMode.value  = true;
+    editingExpenseId.value   = expense.id;
+    selectedGroupId.value    = groupId;
+    expenseAmountController.text = expense.amount.toString();
+    expenseDescController.text   = expense.description;
+    selectedDate.value           = expense.date;
+  }
+
+  // ── Add or Update expense ─────────────────────────────────────
+
+  Future<void> submitGroupExpense() async {
+    final amount      = double.tryParse(
+        expenseAmountController.text.trim());
     final description = expenseDescController.text.trim();
 
     if (amount == null || amount <= 0) {
@@ -120,20 +191,34 @@ class GroupController extends GetxController {
 
     isExpenseSubmitting.value = true;
     try {
-      final success = await _service.addGroupExpense(
-        groupId:     selectedGroupId.value,
-        description: description,
-        amount:      amount,
-        date:        selectedDate.value.toIso8601String(),
-      );
+      bool success;
+      if (isExpenseEditMode.value) {
+        success = await _service.updateGroupExpense(
+          groupId:     selectedGroupId.value,
+          expenseId:   editingExpenseId.value,
+          description: description,
+          amount:      amount,
+          date:        selectedDate.value.toIso8601String(),
+        );
+        if (success) _showSuccess('Expense updated');
+      } else {
+        success = await _service.addGroupExpense(
+          groupId:     selectedGroupId.value,
+          description: description,
+          amount:      amount,
+          date:        selectedDate.value.toIso8601String(),
+        );
+        if (success) _showSuccess('Expense added');
+      }
 
       if (success) {
-        _showSuccess('Expense added');
         await loadGroups();
         Get.back();
         _resetExpenseForm();
       } else {
-        _showError('Failed to add expense');
+        _showError(isExpenseEditMode.value
+            ? 'Failed to update expense'
+            : 'Failed to add expense');
       }
     } catch (e) {
       _showError(e.toString());
@@ -142,29 +227,73 @@ class GroupController extends GetxController {
     }
   }
 
+  // ── Delete expense ────────────────────────────────────────────
+
+  Future<void> deleteExpense({
+    required String groupId,
+    required String expenseId,
+  }) async {
+    try {
+      final success = await _service.deleteExpense(
+        groupId:   groupId,
+        expenseId: expenseId,
+      );
+      if (success) {
+        await loadGroups();
+        _showSuccess('Expense deleted');
+      } else {
+        _showError('Failed to delete expense');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  // ── Mark as paid ──────────────────────────────────────────────
+
   Future<void> markAsPaid({
     required String groupId,
     required String expenseId,
     required String memberEmail,
   }) async {
     try {
-      await _service.markAsPaid(
+      final success = await _service.markAsPaid(
         groupId:     groupId,
         expenseId:   expenseId,
         memberEmail: memberEmail,
       );
-      _showSuccess('Marked as paid');
-      await loadGroups();
+      if (success) {
+        await loadGroups();
+        _showSuccess('Marked as paid');
+      }
     } catch (e) {
       _showError(e.toString());
     }
   }
 
+  // ── Reset forms ───────────────────────────────────────────────
+
+  void _resetGroupForm() {
+    isEditMode.value     = false;
+    editingGroupId.value = '';
+    titleController.clear();
+    descController.clear();
+    for (final c in memberControllers) { c.dispose(); }
+    memberControllers.assignAll([TextEditingController()]);
+  }
+
   void _resetExpenseForm() {
+    isExpenseEditMode.value  = false;
+    editingExpenseId.value   = '';
     expenseAmountController.clear();
     expenseDescController.clear();
     selectedDate.value = DateTime.now();
   }
+
+  void resetGroupForm()   => _resetGroupForm();
+  void resetExpenseForm() => _resetExpenseForm();
+
+  // ── Snackbars ─────────────────────────────────────────────────
 
   void _showError(String msg) => Get.snackbar(
     'Error', msg,

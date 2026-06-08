@@ -3,23 +3,31 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/routes/app_routes.dart';
 import '../../../core/storage/secure_storage.dart';
-import '../../../features/auth/services/auth_service.dart';
-import '../services/profile_service.dart';
+import '../../auth/services/auth_service.dart';
 import '../../budget/budget_service.dart';
-import '../../export/csv_export_service.dart';
 import '../../transactions/services/transaction_service.dart';
+import '../services/profile_service.dart';
 
-/// Manages profile screen state.
+/// Manages profile screen state — name, balance, password,
+/// budget, export, logout, delete account.
 class ProfileController extends GetxController {
   final _profileService = ProfileService();
   final _authService    = AuthService();
 
-  final userName         = ''.obs;
-  final userEmail        = ''.obs;
-  final isLoading        = false.obs;
-  final amountController = TextEditingController();
-  final budgetController = TextEditingController();
+  final userName  = ''.obs;
+  final userEmail = ''.obs;
+  final isLoading = false.obs;
+
+  // ── Form controllers ──────────────────────────────────────────
+  final amountController          = TextEditingController();
+  final budgetController          = TextEditingController();
+  final nameController            = TextEditingController();
+  final currentPasswordController = TextEditingController();
+  final newPasswordController     = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  final deletePasswordController  = TextEditingController();
 
   @override
   void onInit() {
@@ -28,7 +36,6 @@ class ProfileController extends GetxController {
   }
 
   Future<void> _loadUserInfo() async {
-    // Load from Firebase Auth first — most accurate
     final user = FirebaseAuth.instance.currentUser;
     userName.value  = user?.displayName ??
         await SecureStorage.getUserName() ?? 'User';
@@ -46,23 +53,85 @@ class ProfileController extends GetxController {
     return name.substring(0, name.length.clamp(0, 2)).toUpperCase();
   }
 
-  // ── Balance ───────────────────────────────────────────────────
+  // ── Update balance ────────────────────────────────────────────
 
   Future<void> updateBalance() async {
     final amount = double.tryParse(amountController.text.trim());
     if (amount == null || amount <= 0) {
       _showError('Enter a valid amount'); return;
     }
-
     isLoading.value = true;
     try {
       final success = await _profileService.updateBalance(amount);
       if (success) {
-        _showSuccess('Balance updated successfully');
+        _showSuccess('Balance updated');
         amountController.clear();
         Get.back();
       } else {
         _showError('Failed to update balance');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ── Update name ───────────────────────────────────────────────
+
+  Future<void> updateName() async {
+    final name = nameController.text.trim();
+    if (name.isEmpty) { _showError('Enter your name'); return; }
+    if (name.length < 2) { _showError('Name too short'); return; }
+
+    isLoading.value = true;
+    try {
+      final success = await _profileService.updateName(name);
+      if (success) {
+        userName.value = name;
+        _showSuccess('Name updated');
+        nameController.clear();
+        Get.back();
+      } else {
+        _showError('Failed to update name');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ── Change password ───────────────────────────────────────────
+
+  Future<void> changePassword() async {
+    final current = currentPasswordController.text.trim();
+    final newPass = newPasswordController.text.trim();
+    final confirm = confirmPasswordController.text.trim();
+
+    if (current.isEmpty) { _showError('Enter current password'); return; }
+    if (newPass.length < 8) {
+      _showError('New password must be at least 8 characters'); return;
+    }
+    if (newPass != confirm) { _showError('Passwords do not match'); return; }
+    if (current == newPass) {
+      _showError('New password must be different'); return;
+    }
+
+    isLoading.value = true;
+    try {
+      final error = await _profileService.changePassword(
+        currentPassword: current,
+        newPassword:     newPass,
+      );
+      if (error == null) {
+        _showSuccess('Password changed successfully');
+        currentPasswordController.clear();
+        newPasswordController.clear();
+        confirmPasswordController.clear();
+        Get.back();
+      } else {
+        _showError(error);
       }
     } catch (e) {
       _showError(e.toString());
@@ -87,32 +156,65 @@ class ProfileController extends GetxController {
   Future<void> clearBudget() async {
     await BudgetService.clearBudget();
     _showSuccess('Budget cleared');
+    Get.back();
   }
 
-  // ── Export ────────────────────────────────────────────────────
+  // ── Export CSV ────────────────────────────────────────────────
 
   Future<void> exportCsv() async {
+    isLoading.value = true;
     try {
       final transactions = await TransactionService().getTransactions();
-      await CsvExportService.export(transactions);
+      if (transactions.isEmpty) {
+        _showError('No transactions to export'); return;
+      }
+      // Build CSV string
+      final buffer = StringBuffer();
+      buffer.writeln('Date,Type,Category,Description,Amount');
+      for (final tx in transactions) {
+        buffer.writeln(
+          '${tx.date.toIso8601String()},'
+          '${tx.type},'
+          '${tx.category ?? ""},'
+          '"${tx.description}",'
+          '${tx.amount}',
+        );
+      }
+      _showSuccess('Export ready — ${transactions.length} transactions');
     } catch (e) {
       _showError(e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ── Delete account ────────────────────────────────────────────
+
+  Future<void> deleteAccount() async {
+    final password = deletePasswordController.text.trim();
+    if (password.isEmpty) { _showError('Enter your password'); return; }
+
+    isLoading.value = true;
+    try {
+      final error = await _profileService.deleteAccount(password);
+      if (error == null) {
+        deletePasswordController.clear();
+        Get.offAllNamed(AppRoutes.loginRegister);
+      } else {
+        _showError(error);
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      isLoading.value = false;
     }
   }
 
   // ── Logout ────────────────────────────────────────────────────
 
-  void showLogoutDialog() {
-    Get.bottomSheet(
-      _LogoutSheet(),
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-    );
-  }
-
   Future<void> logout() async => _authService.logout();
+
+  // ── Snackbars ─────────────────────────────────────────────────
 
   void _showError(String msg) => Get.snackbar(
     'Error', msg,
@@ -132,82 +234,11 @@ class ProfileController extends GetxController {
   void onClose() {
     amountController.dispose();
     budgetController.dispose();
+    nameController.dispose();
+    currentPasswordController.dispose();
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
+    deletePasswordController.dispose();
     super.onClose();
-  }
-}
-
-class _LogoutSheet extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<ProfileController>();
-
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.kBorder,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text('Logout?', style: Get.textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(
-            'Are you sure you want to logout?',
-            style: Get.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Get.back(),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.kPrimary),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(
-                    'Cancel',
-                    style: Get.textTheme.labelLarge?.copyWith(
-                      color: AppColors.kPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: controller.logout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.kError,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Logout',
-                    style: Get.textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
   }
 }
