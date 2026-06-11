@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
 import 'package:get/get.dart';
+import 'package:moneybuddy/features/emi/controllers/emi_controller.dart';
+import 'package:moneybuddy/features/goal/controllers/goals_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -69,9 +71,15 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        GestureDetector(
-                          onTap: () => Get.toNamed(AppRoutes.profile),
-                          child: _Avatar(name: controller.userName.value),
+                        Material(
+                          color: Colors.transparent,
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.hardEdge,
+                          child: InkWell(
+                            onTap: () => Get.toNamed(AppRoutes.profile),
+                            customBorder: const CircleBorder(),
+                            child: _Avatar(name: controller.userName.value),
+                          ),
                         ),
                       ],
                     ),
@@ -177,9 +185,23 @@ class HomeScreen extends StatelessWidget {
                     );
                   }),
 
+                  Gap(R.h(context, 20)),
+
+// ── Quick actions — Goals + EMI ──────────────────────────────────
+                  Padding(
+                    padding: AppSpacing.horizontalScreen,
+                    child: Row(
+                      children: [
+                        Expanded(child: _GoalsMiniCard()),
+                        Gap(R.w(context, 12)),
+                        Expanded(child: _EmiMiniCard()),
+                      ],
+                    ),
+                  ).animate(delay: 170.ms).fadeIn(duration: 300.ms),
+
                   Gap(R.h(context, 24)),
 
-                  // ── Recent transactions ──────────────────────
+// ── Recent transactions ──────────────────────────────────────────
                   Padding(
                     padding: AppSpacing.horizontalScreen,
                     child: SectionHeader(
@@ -424,6 +446,345 @@ class _Avatar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Goals Mini Card ───────────────────────────────────────────────
+
+class _GoalsMiniCard extends StatelessWidget {
+  const _GoalsMiniCard();
+
+  @override
+  Widget build(BuildContext context) {
+    // Safe find — controller may not be ready
+    GoalsController? ctrl;
+    try {
+      ctrl = Get.find<GoalsController>();
+    } catch (_) {}
+    if (ctrl == null) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.goals),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.kCard,
+          borderRadius: AppRadius.card,
+          border: Border.all(color: AppColors.kBorder, width: 0.8),
+          boxShadow: AppShadows.card,
+        ),
+        child: Obx(() {
+          // Loading state
+          if (ctrl!.isLoading.value) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MiniCardHeader(
+                  icon: CupertinoIcons.star_circle_fill,
+                  color: AppColors.kWarning,
+                  label: 'Goals',
+                ),
+                Gap(R.h(context, 8)),
+                ShimmerWidget(width: double.infinity, height: R.h(context, 40)),
+              ],
+            );
+          }
+
+          final goals = ctrl.goals;
+          final active = goals.where((g) => !g.isCompleted).toList();
+          final achieved = goals.where((g) => g.isCompleted).toList();
+
+          // No goals created yet
+          if (goals.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MiniCardHeader(
+                  icon: CupertinoIcons.star_circle_fill,
+                  color: AppColors.kWarning,
+                  label: 'Goals',
+                ),
+                Gap(R.h(context, 10)),
+                Text(
+                  'No goals yet',
+                  style: AppTextStyles.labelMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Gap(R.h(context, 4)),
+                Text(
+                  'Tap to start saving',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            );
+          }
+
+          // All goals achieved
+          if (active.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MiniCardHeader(
+                  icon: CupertinoIcons.star_circle_fill,
+                  color: AppColors.kSuccess,
+                  label: 'Goals',
+                ),
+                Gap(R.h(context, 10)),
+                Text(
+                  '${achieved.length} achieved!',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.kSuccess,
+                  ),
+                ),
+                Gap(R.h(context, 4)),
+                Text(
+                  'All goals done 🎉',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            );
+          }
+
+          // Show nearest deadline goal
+          active.sort((a, b) => a.daysLeft.compareTo(b.daysLeft));
+          final nearest = active.first;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MiniCardHeader(
+                icon: CupertinoIcons.star_circle_fill,
+                color: AppColors.kWarning,
+                label: 'Goals',
+              ),
+              Gap(R.h(context, 10)),
+              Text(
+                nearest.title,
+                style: AppTextStyles.labelMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Gap(R.h(context, 6)),
+              ClipRRect(
+                borderRadius: AppRadius.pill,
+                child: LinearProgressIndicator(
+                  value: nearest.progress,
+                  minHeight: 4,
+                  backgroundColor: AppColors.kSurface,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.kWarning,
+                  ),
+                ),
+              ),
+              Gap(R.h(context, 4)),
+              Text(
+                nearest.isCompleted
+                    ? 'Achieved!'
+                    : '${(nearest.progress * 100).toStringAsFixed(0)}%'
+                        ' · ${nearest.daysLeft}d left',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.kWarning,
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── EMI Mini Card ─────────────────────────────────────────────────
+
+class _EmiMiniCard extends StatelessWidget {
+  const _EmiMiniCard();
+
+  @override
+  Widget build(BuildContext context) {
+    EmiController? ctrl;
+    try {
+      ctrl = Get.find<EmiController>();
+    } catch (_) {}
+    if (ctrl == null) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.emi),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.kCard,
+          borderRadius: AppRadius.card,
+          border: Border.all(color: AppColors.kBorder, width: 0.8),
+          boxShadow: AppShadows.card,
+        ),
+        child: Obx(() {
+          if (ctrl!.isLoading.value) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MiniCardHeader(
+                  icon: CupertinoIcons.creditcard_fill,
+                  color: AppColors.kInfo,
+                  label: 'EMI',
+                ),
+                Gap(R.h(context, 8)),
+                ShimmerWidget(width: double.infinity, height: R.h(context, 40)),
+              ],
+            );
+          }
+
+          final emis = ctrl.emis;
+          final active = emis.where((e) => !e.isCompleted).toList();
+
+          // No EMIs added
+          if (emis.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MiniCardHeader(
+                  icon: CupertinoIcons.creditcard_fill,
+                  color: AppColors.kInfo,
+                  label: 'EMI',
+                ),
+                Gap(R.h(context, 10)),
+                Text(
+                  'No EMIs yet',
+                  style: AppTextStyles.labelMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Gap(R.h(context, 4)),
+                Text(
+                  'Tap to track loans',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            );
+          }
+
+          // All EMIs completed — hide card
+          if (active.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MiniCardHeader(
+                  icon: CupertinoIcons.creditcard_fill,
+                  color: AppColors.kSuccess,
+                  label: 'EMI',
+                ),
+                Gap(R.h(context, 10)),
+                Text(
+                  'All paid off!',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.kSuccess,
+                  ),
+                ),
+                Gap(R.h(context, 4)),
+                Text(
+                  'No active loans',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            );
+          }
+
+          // Show next due EMI
+          active.sort((a, b) => a.daysUntilDue.compareTo(b.daysUntilDue));
+          final next = active.first;
+          final days = next.daysUntilDue;
+          final isOverdue = days < 0;
+          final isDueSoon = days >= 0 && days <= 7;
+          final statusColor = isOverdue
+              ? AppColors.kError
+              : isDueSoon
+                  ? AppColors.kWarning
+                  : AppColors.kInfo;
+          final statusText = isOverdue
+              ? 'Overdue ${(-days)}d'
+              : days == 0
+                  ? 'Due today'
+                  : 'Due in ${days}d';
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MiniCardHeader(
+                icon: CupertinoIcons.creditcard_fill,
+                color: statusColor,
+                label: 'EMI',
+              ),
+              Gap(R.h(context, 10)),
+              Text(
+                next.name,
+                style: AppTextStyles.labelMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Gap(R.h(context, 4)),
+              Text(
+                '${AppFormatters.formatCurrencyCompact(next.emiAmount)}/mo',
+                style: AppTextStyles.moneySmall.copyWith(
+                  color: AppColors.kTextPrimary,
+                ),
+              ),
+              Gap(R.h(context, 4)),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: R.w(context, 6),
+                  vertical: R.h(context, 2),
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.pill,
+                ),
+                child: Text(
+                  statusText,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: statusColor,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Mini Card Header ──────────────────────────────────────────────
+
+class _MiniCardHeader extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  const _MiniCardHeader({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: R.w(context, 16)),
+        Gap(R.w(context, 6)),
+        Text(
+          label,
+          style: AppTextStyles.labelMedium.copyWith(color: color),
+        ),
+        const Spacer(),
+        Icon(
+          CupertinoIcons.chevron_right,
+          size: R.w(context, 12),
+          color: AppColors.kTextHint,
+        ),
+      ],
     );
   }
 }

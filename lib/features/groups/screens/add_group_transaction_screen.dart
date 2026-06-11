@@ -26,7 +26,6 @@ class AddGroupTransactionScreen extends StatelessWidget {
     final args = Get.arguments as Map<String, dynamic>? ?? {};
     final groupTitle = args['groupTitle'] as String? ?? 'Group';
     final groupId = args['groupId'] as String? ?? '';
-    final group = controller.groups.firstWhereOrNull((g) => g.id == groupId);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (groupId.isNotEmpty && !controller.isExpenseEditMode.value) {
@@ -104,76 +103,22 @@ class AddGroupTransactionScreen extends StatelessWidget {
 
                     Gap(R.h(context, 12)),
 
-                    // ── Amount + Mic ──────────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: controller.expenseAmountController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            style: AppTextStyles.displayLarge,
-                            textAlign: TextAlign.center,
-                            decoration: InputDecoration(
-                              hintText: '₹0',
-                              hintStyle: AppTextStyles.displayLarge
-                                  .copyWith(color: Colors.white38),
-                              border: InputBorder.none,
-                              filled: false,
-                            ),
-                            cursorColor: Colors.white,
-                          ),
-                        ),
-
-                        // ── Mic button ────────────────────────
-                        Padding(
-                          padding: EdgeInsets.only(right: R.w(context, 8)),
-                          child: Obx(() => GestureDetector(
-                                onTap: controller.toggleVoiceInput,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: R.w(context, 44),
-                                  height: R.w(context, 44),
-                                  decoration: BoxDecoration(
-                                    color: controller.isListening.value
-                                        ? Colors.red.withValues(alpha: 0.85)
-                                        : Colors.white.withValues(alpha: 0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    controller.isListening.value
-                                        ? CupertinoIcons.stop_fill
-                                        : CupertinoIcons.mic,
-                                    color: Colors.white,
-                                    size: R.w(context, 20),
-                                  ),
-                                ),
-                              )),
-                        ),
-                      ],
+                    // ── Amount ────────────────────────────────
+                    TextField(
+                      controller: controller.expenseAmountController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      style: AppTextStyles.displayLarge,
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        hintText: '₹0',
+                        hintStyle: AppTextStyles.displayLarge
+                            .copyWith(color: Colors.white38),
+                        border: InputBorder.none,
+                        filled: false,
+                      ),
+                      cursorColor: Colors.white,
                     ),
-
-                    // Voice status
-                    Obx(() {
-                      if (!controller.isListening.value &&
-                          controller.voiceText.value.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: R.h(context, 4)),
-                        child: Text(
-                          controller.isListening.value
-                              ? 'Listening...'
-                              : '"${controller.voiceText.value}"',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: Colors.white70,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }),
 
                     Gap(R.h(context, 8)),
                   ],
@@ -203,7 +148,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Who paid? ────────────────────────────────
+                  // ── Who paid? ──────────────────────────────
                   Text('Who paid?', style: AppTextStyles.inputLabel),
                   Gap(R.h(context, 8)),
                   Obx(() => GestureDetector(
@@ -254,20 +199,17 @@ class AddGroupTransactionScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Split between ────────────────────────────
+                  // ── Split between ──────────────────────────
                   Text('Split between', style: AppTextStyles.inputLabel),
                   Gap(R.h(context, 8)),
                   Obx(() {
                     final selected = controller.selectedSplitWith;
-
-                    // Show all names joined
                     final label = selected.isEmpty
                         ? 'Select members'
                         : selected.length == 1
                             ? selected.first.displayName
                             : selected.map((m) => m.displayName).join(', ');
 
-                    // Live per-person preview
                     final amount = double.tryParse(
                         controller.expenseAmountController.text.trim());
                     final perPerson = amount != null && selected.isNotEmpty
@@ -322,8 +264,6 @@ class AddGroupTransactionScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-
-                        // Per-person preview
                         if (perPerson > 0) ...[
                           Gap(R.h(context, 6)),
                           Text(
@@ -339,7 +279,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Date ─────────────────────────────────────
+                  // ── Date ───────────────────────────────────
                   Text(AppStrings.date, style: AppTextStyles.inputLabel),
                   Gap(R.h(context, 8)),
                   Obx(() => GestureDetector(
@@ -390,7 +330,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
     );
   }
 
-  // ── Who Paid Bottom Sheet ─────────────────────────────────────
+  // ── Who Paid Sheet ────────────────────────────────────────────
 
   void _showWhoPaidSheet(
     BuildContext context,
@@ -486,7 +426,7 @@ class AddGroupTransactionScreen extends StatelessWidget {
     );
   }
 
-  // ── Split Between Bottom Sheet ────────────────────────────────
+  // ── Split Between Sheet ───────────────────────────────────────
 
   void _showSplitBetweenSheet(
     BuildContext context,
@@ -558,7 +498,6 @@ class AddGroupTransactionScreen extends StatelessWidget {
                 return Obx(() {
                   final isSelected = controller.selectedSplitWith
                       .any((m) => m.displayName == member.displayName);
-
                   final amount = double.tryParse(
                     controller.expenseAmountController.text.trim(),
                   );

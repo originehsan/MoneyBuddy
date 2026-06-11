@@ -1,10 +1,12 @@
 // MoneyBuddy
 import 'package:get/get.dart';
 import 'package:moneybuddy/features/analytics/controllers/analytics_controller.dart';
+import 'package:moneybuddy/features/goal/controllers/goals_controller.dart';
 import 'package:moneybuddy/features/groups/controllers/group_controller.dart';
 import 'package:moneybuddy/features/home/controllers/home_controller.dart';
 import 'package:moneybuddy/features/profile/controllers/profile_controller.dart';
 import 'package:moneybuddy/features/transactions/controllers/transaction_controller.dart';
+import 'package:moneybuddy/features/emi/controllers/emi_controller.dart';
 import '../controllers/main_controller.dart';
 
 /// Registers all controllers needed by the main shell and its tabs.
@@ -18,5 +20,7 @@ class MainBinding implements Bindings {
     Get.lazyPut(() => AnalyticsController());
     Get.lazyPut(() => GroupController());
     Get.lazyPut(() => ProfileController());
+    Get.lazyPut(() => GoalsController());
+    Get.lazyPut(() => EmiController());
   }
 }

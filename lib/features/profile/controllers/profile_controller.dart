@@ -6,19 +6,19 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../auth/services/auth_service.dart';
+import '../../auth/services/pin_service.dart';
 import '../../budget/budget_service.dart';
 import '../../transactions/services/transaction_service.dart';
 import '../services/profile_service.dart';
 
-/// Manages profile screen state — name, balance, password,
-/// budget, export, logout, delete account.
 class ProfileController extends GetxController {
   final _profileService = ProfileService();
   final _authService    = AuthService();
 
-  final userName  = ''.obs;
-  final userEmail = ''.obs;
-  final isLoading = false.obs;
+  final userName    = ''.obs;
+  final userEmail   = ''.obs;
+  final isLoading   = false.obs;
+  final isPinSet    = false.obs;
 
   // ── Form controllers ──────────────────────────────────────────
   final amountController          = TextEditingController();
@@ -33,6 +33,7 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     _loadUserInfo();
+    _checkPinStatus();
   }
 
   Future<void> _loadUserInfo() async {
@@ -41,6 +42,10 @@ class ProfileController extends GetxController {
         await SecureStorage.getUserName() ?? 'User';
     userEmail.value = user?.email ??
         await SecureStorage.getUserEmail() ?? '';
+  }
+
+  Future<void> _checkPinStatus() async {
+    isPinSet.value = await PinService.hasPinSet();
   }
 
   String get initials {
@@ -81,8 +86,8 @@ class ProfileController extends GetxController {
 
   Future<void> updateName() async {
     final name = nameController.text.trim();
-    if (name.isEmpty) { _showError('Enter your name'); return; }
-    if (name.length < 2) { _showError('Name too short'); return; }
+    if (name.isEmpty)   { _showError('Enter your name'); return; }
+    if (name.length < 2){ _showError('Name too short');  return; }
 
     isLoading.value = true;
     try {
@@ -140,6 +145,32 @@ class ProfileController extends GetxController {
     }
   }
 
+  // ── PIN management ────────────────────────────────────────────
+
+  Future<void> navigateToPinSetup() async {
+    final result = await Get.toNamed(
+      AppRoutes.pinSetup,
+      arguments: {'mode': 'set'},
+    );
+    if (result == true) await _checkPinStatus();
+  }
+
+  Future<void> navigateToPinChange() async {
+    final result = await Get.toNamed(
+      AppRoutes.pinSetup,
+      arguments: {'mode': 'change'},
+    );
+    if (result == true) await _checkPinStatus();
+  }
+
+  Future<void> navigateToPinRemove() async {
+    final result = await Get.toNamed(
+      AppRoutes.pinSetup,
+      arguments: {'mode': 'remove'},
+    );
+    if (result == true) await _checkPinStatus();
+  }
+
   // ── Budget ────────────────────────────────────────────────────
 
   Future<void> saveBudget() async {
@@ -168,7 +199,6 @@ class ProfileController extends GetxController {
       if (transactions.isEmpty) {
         _showError('No transactions to export'); return;
       }
-      // Build CSV string
       final buffer = StringBuffer();
       buffer.writeln('Date,Type,Category,Description,Amount');
       for (final tx in transactions) {
@@ -180,7 +210,8 @@ class ProfileController extends GetxController {
           '${tx.amount}',
         );
       }
-      _showSuccess('Export ready — ${transactions.length} transactions');
+      _showSuccess(
+          'Export ready — ${transactions.length} transactions');
     } catch (e) {
       _showError(e.toString());
     } finally {
@@ -198,6 +229,7 @@ class ProfileController extends GetxController {
     try {
       final error = await _profileService.deleteAccount(password);
       if (error == null) {
+        await PinService.clearAll(); // clear PIN on account delete
         deletePasswordController.clear();
         Get.offAllNamed(AppRoutes.loginRegister);
       } else {
@@ -212,23 +244,26 @@ class ProfileController extends GetxController {
 
   // ── Logout ────────────────────────────────────────────────────
 
-  Future<void> logout() async => _authService.logout();
+  Future<void> logout() async {
+    await PinService.clearAll(); // clear PIN on logout
+    await _authService.logout();
+  }
 
   // ── Snackbars ─────────────────────────────────────────────────
 
   void _showError(String msg) => Get.snackbar(
-    'Error', msg,
-    backgroundColor: AppColors.kError,
-    colorText: Colors.white,
-    snackPosition: SnackPosition.BOTTOM,
-  );
+        'Error', msg,
+        backgroundColor: AppColors.kError,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
+      );
 
   void _showSuccess(String msg) => Get.snackbar(
-    'Success', msg,
-    backgroundColor: AppColors.kSuccess,
-    colorText: Colors.white,
-    snackPosition: SnackPosition.BOTTOM,
-  );
+        'Success', msg,
+        backgroundColor: AppColors.kSuccess,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
+      );
 
   @override
   void onClose() {

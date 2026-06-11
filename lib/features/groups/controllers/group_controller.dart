@@ -1,16 +1,14 @@
 // MoneyBuddy
-import 'package:firebase_auth/firebase_auth.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:moneybuddy/core/routes/app_routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../speech/speech_service.dart';
 import '../models/group_model.dart';
 import '../services/group_service.dart';
 
 class GroupController extends GetxController {
-  final _service       = GroupService();
-  final _speechService = SpeechService();
+  final _service = GroupService();
 
   // ── List state ────────────────────────────────────────────────
   final isLoading    = true.obs;
@@ -24,7 +22,6 @@ class GroupController extends GetxController {
   final isEditMode      = false.obs;
   final editingGroupId  = ''.obs;
 
-  // Member name controllers (name only — no email needed)
   final memberNameControllers = <TextEditingController>[
     TextEditingController(),
   ].obs;
@@ -38,13 +35,8 @@ class GroupController extends GetxController {
   final isExpenseEditMode       = false.obs;
   final editingExpenseId        = ''.obs;
 
-  // Who paid + split between
   final selectedPaidBy    = Rxn<GroupMember>();
   final selectedSplitWith = <GroupMember>[].obs;
-
-  // ── Voice input ───────────────────────────────────────────────
-  final isListening = false.obs;
-  final voiceText   = ''.obs;
 
   // ── Current user info ─────────────────────────────────────────
   String get _currentEmail =>
@@ -72,7 +64,7 @@ class GroupController extends GetxController {
     }
   }
 
-  // ── Member name management ────────────────────────────────────
+  // ── Member management ─────────────────────────────────────────
 
   void addMemberField() {
     if (memberNameControllers.length < 10) {
@@ -146,8 +138,8 @@ class GroupController extends GetxController {
         _resetGroupForm();
 
         if (!wasEdit) {
-          // WhatsApp pattern — clear back stack to main, then push detail
-          Get.until((route) => route.settings.name == AppRoutes.main);
+          Get.until(
+              (route) => route.settings.name == AppRoutes.main);
           if (groups.isNotEmpty) {
             final newGroup = groups.first;
             Get.toNamed(
@@ -209,15 +201,15 @@ class GroupController extends GetxController {
     }
   }
 
-  // ── Expense: init who paid + split between ────────────────────
+  // ── Expense defaults ──────────────────────────────────────────
 
   void initExpenseDefaults(GroupModel group) {
-    // Find current user in members, fallback to first member
     final currentMember = group.members.firstWhereOrNull(
           (m) => m.email == _currentEmail) ??
         (group.members.isNotEmpty
             ? group.members.first
-            : GroupMember(name: _currentName, email: _currentEmail));
+            : GroupMember(
+                name: _currentName, email: _currentEmail));
 
     selectedPaidBy.value    = currentMember;
     selectedSplitWith.value = List.from(group.members);
@@ -226,7 +218,7 @@ class GroupController extends GetxController {
   // ── Submit expense ────────────────────────────────────────────
 
   Future<void> submitGroupExpense() async {
-    final amount      = double.tryParse(
+    final amount = double.tryParse(
         expenseAmountController.text.trim());
     final description = expenseDescController.text.trim();
 
@@ -243,7 +235,8 @@ class GroupController extends GetxController {
       _showError('Select who paid'); return;
     }
     if (selectedSplitWith.isEmpty) {
-      _showError('Select at least one person to split with'); return;
+      _showError('Select at least one person to split with');
+      return;
     }
 
     isExpenseSubmitting.value = true;
@@ -277,9 +270,9 @@ class GroupController extends GetxController {
       }
 
       if (success) {
-        loadGroups(); // background reload
+        loadGroups();
         _resetExpenseForm();
-        Get.back();  // close AddGroupTransactionScreen
+        Get.back();
       } else {
         _showError(wasEdit
             ? 'Failed to update expense'
@@ -335,15 +328,15 @@ class GroupController extends GetxController {
     }
   }
 
-  // ── Mark settlement paid (optimistic) ─────────────────────────
+  // ── Mark settlement paid ──────────────────────────────────────
 
   Future<void> markSettlementPaid({
     required String groupId,
     required String expenseId,
     required String memberEmail,
   }) async {
-    // Optimistic UI — update local state immediately
-    final groupIndex = groups.indexWhere((g) => g.id == groupId);
+    final groupIndex =
+        groups.indexWhere((g) => g.id == groupId);
     if (groupIndex != -1) {
       final expenseIndex = groups[groupIndex]
           .expenses
@@ -363,19 +356,26 @@ class GroupController extends GetxController {
             .toList();
 
         final updatedExpense = GroupExpense(
-          id:             expenseId,
-          description:    groups[groupIndex].expenses[expenseIndex].description,
-          amount:         groups[groupIndex].expenses[expenseIndex].amount,
-          date:           groups[groupIndex].expenses[expenseIndex].date,
-          paidBy:         groups[groupIndex].expenses[expenseIndex].paidBy,
-          paidByName:     groups[groupIndex].expenses[expenseIndex].paidByName,
-          splitBetween:   groups[groupIndex].expenses[expenseIndex].splitBetween,
-          perPersonShare: groups[groupIndex].expenses[expenseIndex].perPersonShare,
-          settlements:    updatedSettlements,
+          id:           expenseId,
+          description:  groups[groupIndex]
+              .expenses[expenseIndex].description,
+          amount:       groups[groupIndex]
+              .expenses[expenseIndex].amount,
+          date:         groups[groupIndex]
+              .expenses[expenseIndex].date,
+          paidBy:       groups[groupIndex]
+              .expenses[expenseIndex].paidBy,
+          paidByName:   groups[groupIndex]
+              .expenses[expenseIndex].paidByName,
+          splitBetween: groups[groupIndex]
+              .expenses[expenseIndex].splitBetween,
+          perPersonShare: groups[groupIndex]
+              .expenses[expenseIndex].perPersonShare,
+          settlements: updatedSettlements,
         );
 
-        final updatedExpenses =
-            List<GroupExpense>.from(groups[groupIndex].expenses);
+        final updatedExpenses = List<GroupExpense>.from(
+            groups[groupIndex].expenses);
         updatedExpenses[expenseIndex] = updatedExpense;
 
         final updatedGroup = GroupModel(
@@ -393,7 +393,6 @@ class GroupController extends GetxController {
       }
     }
 
-    // Sync to Firestore in background
     try {
       await _service.markSettlementPaid(
         groupId:     groupId,
@@ -403,47 +402,8 @@ class GroupController extends GetxController {
       _showSuccess('Marked as paid');
     } catch (e) {
       _showError('Failed to update');
-      loadGroups(); // rollback on failure
+      loadGroups();
     }
-  }
-
-  // ── Voice input ───────────────────────────────────────────────
-
-  Future<void> toggleVoiceInput() async {
-    if (isListening.value) {
-      await _speechService.stopListening();
-      isListening.value = false;
-      _applyVoiceText();
-    } else {
-      final available = await _speechService.initialize();
-      if (!available) {
-        _showError('Microphone not available'); return;
-      }
-
-      isListening.value = true;
-      voiceText.value   = '';
-
-      await _speechService.startListening(
-        onResult: (text) => voiceText.value = text,
-        onDone: () {
-          isListening.value = false;
-          _applyVoiceText();
-        },
-      );
-    }
-  }
-
-  void _applyVoiceText() {
-    if (voiceText.value.isEmpty) return;
-    final parsed = SpeechService.parse(voiceText.value);
-    if (parsed.amount != null) {
-      expenseAmountController.text =
-          parsed.amount!.toStringAsFixed(0);
-    }
-    if (parsed.description.isNotEmpty) {
-      expenseDescController.text = parsed.description;
-    }
-    voiceText.value = '';
   }
 
   // ── Balances computation ──────────────────────────────────────
@@ -469,20 +429,22 @@ class GroupController extends GetxController {
       }
     }
 
-    final debts          = <DebtSummary>[];
-    final creditors      = net.entries
+    final debts     = <DebtSummary>[];
+    final creditors = net.entries
         .where((e) => e.value > 0.5)
         .toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final debtors        = net.entries
+    final debtors = net.entries
         .where((e) => e.value < -0.5)
         .toList()
       ..sort((a, b) => a.value.compareTo(b.value));
 
     var ci = 0;
     var di = 0;
-    final creditorAmounts = creditors.map((e) => e.value).toList();
-    final debtorAmounts   = debtors.map((e) => e.value.abs()).toList();
+    final creditorAmounts =
+        creditors.map((e) => e.value).toList();
+    final debtorAmounts =
+        debtors.map((e) => e.value.abs()).toList();
 
     while (ci < creditors.length && di < debtors.length) {
       final settle = creditorAmounts[ci] < debtorAmounts[di]
@@ -524,8 +486,6 @@ class GroupController extends GetxController {
     selectedDate.value           = DateTime.now();
     selectedPaidBy.value         = null;
     selectedSplitWith.value      = [];
-    voiceText.value              = '';
-    isListening.value            = false;
   }
 
   void resetGroupForm()   => _resetGroupForm();
@@ -534,18 +494,18 @@ class GroupController extends GetxController {
   // ── Snackbars ─────────────────────────────────────────────────
 
   void _showError(String msg) => Get.snackbar(
-    'Error', msg,
-    backgroundColor: AppColors.kError,
-    colorText:       Colors.white,
-    snackPosition:   SnackPosition.BOTTOM,
-  );
+        'Error', msg,
+        backgroundColor: AppColors.kError,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
+      );
 
   void _showSuccess(String msg) => Get.snackbar(
-    'Success', msg,
-    backgroundColor: AppColors.kSuccess,
-    colorText:       Colors.white,
-    snackPosition:   SnackPosition.BOTTOM,
-  );
+        'Success', msg,
+        backgroundColor: AppColors.kSuccess,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
+      );
 
   @override
   void onClose() {

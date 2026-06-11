@@ -30,7 +30,7 @@ class ProfileScreen extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
-                gradient: AppColors.kBalanceGradient,
+                gradient:     AppColors.kBalanceGradient,
                 borderRadius: AppRadius.topBar,
               ),
               child: SafeArea(
@@ -46,86 +46,78 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       Text(
                         AppStrings.profile,
-                        style: AppTextStyles.headingMedium.copyWith(
-                          color: Colors.white,
-                        ),
+                        style: AppTextStyles.headingMedium
+                            .copyWith(color: Colors.white),
                       ),
-
                       Gap(R.h(context, 28)),
-
-                      // Large avatar
                       Obx(() => GestureDetector(
-                                onTap: () =>
-                                    _showEditNameSheet(context, controller),
-                                child: Stack(
-                                  children: [
-                                    Container(
-                                      width: R.w(context, 96),
-                                      height: R.w(context, 96),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.2),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.5),
-                                          width: 2.5,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          controller.initials,
-                                          style: AppTextStyles.headingLarge
-                                              .copyWith(
-                                            color: Colors.white,
-                                            fontSize: R.sp(context, 32),
-                                          ),
-                                        ),
+                            onTap: () => _showEditNameSheet(
+                                context, controller),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width:  R.w(context, 96),
+                                  height: R.w(context, 96),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white
+                                        .withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.5),
+                                      width: 2.5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      controller.initials,
+                                      style: AppTextStyles
+                                          .headingLarge
+                                          .copyWith(
+                                        color:    Colors.white,
+                                        fontSize: R.sp(context, 32),
                                       ),
                                     ),
-                                    // Edit badge
-                                    Positioned(
-                                      right: 0,
-                                      bottom: 0,
-                                      child: Container(
-                                        padding:
-                                            EdgeInsets.all(R.w(context, 6)),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          CupertinoIcons.pencil,
-                                          size: R.w(context, 12),
-                                          color: AppColors.kPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              )).animate().fadeIn(duration: 300.ms).scale(
+                                Positioned(
+                                  right:  0,
+                                  bottom: 0,
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.all(R.w(context, 6)),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      CupertinoIcons.pencil,
+                                      size:  R.w(context, 12),
+                                      color: AppColors.kPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ))
+                          .animate()
+                          .fadeIn(duration: 300.ms)
+                          .scale(
                             begin: const Offset(0.8, 0.8),
-                            end: const Offset(1, 1),
+                            end:   const Offset(1, 1),
                           ),
-
                       Gap(R.h(context, 14)),
-
                       Obx(() => Text(
                             controller.userName.value,
-                            style: AppTextStyles.headingMedium.copyWith(
-                              color: Colors.white,
-                            ),
+                            style: AppTextStyles.headingMedium
+                                .copyWith(color: Colors.white),
                           )),
-
                       Gap(R.h(context, 4)),
-
                       Obx(() => Text(
                             controller.userEmail.value,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: Colors.white70,
-                            ),
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: Colors.white70),
                           )),
-
                       Gap(R.h(context, 8)),
                     ],
                   ),
@@ -143,26 +135,28 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Account section ────────────────────────────
+                  // ── Account ───────────────────────────────────
                   _SectionLabel(label: 'Account'),
                   Gap(R.h(context, 8)),
                   _SettingsCard(
                     children: [
                       _SettingsRow(
-                        icon: CupertinoIcons.person,
+                        icon:  CupertinoIcons.person,
                         label: 'Edit Name',
-                        onTap: () => _showEditNameSheet(context, controller),
+                        onTap: () => _showEditNameSheet(
+                            context, controller),
                       ),
                       _SettingsRow(
-                        icon: CupertinoIcons.creditcard,
+                        icon:  CupertinoIcons.creditcard,
                         label: AppStrings.setBalance,
-                        onTap: () => Get.toNamed(AppRoutes.addBalance),
+                        onTap: () =>
+                            Get.toNamed(AppRoutes.addBalance),
                       ),
                       _SettingsRow(
-                        icon: CupertinoIcons.lock,
-                        label: AppStrings.changePassword,
-                        onTap: () =>
-                            _showChangePasswordSheet(context, controller),
+                        icon:   CupertinoIcons.lock,
+                        label:  AppStrings.changePassword,
+                        onTap:  () => _showChangePasswordSheet(
+                            context, controller),
                         isLast: true,
                       ),
                     ],
@@ -170,20 +164,66 @@ class ProfileScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Preferences section ────────────────────────
+                  // ── Security ──────────────────────────────────
+                  _SectionLabel(label: 'Security'),
+                  Gap(R.h(context, 8)),
+                  Obx(() {
+                    final pinSet = controller.isPinSet.value;
+                    return _SettingsCard(
+                      children: [
+                        if (!pinSet)
+                          _SettingsRow(
+                            icon:   CupertinoIcons.lock_shield,
+                            label:  'Set App PIN',
+                            onTap:  controller.navigateToPinSetup,
+                            isLast: true,
+                          ),
+                        if (pinSet) ...[
+                          _SettingsRow(
+                            icon:  CupertinoIcons.lock_rotation,
+                            label: 'Change PIN',
+                            onTap: controller.navigateToPinChange,
+                          ),
+                          _SettingsRow(
+                            icon:      CupertinoIcons.lock_slash,
+                            label:     'Remove PIN',
+                            iconColor: AppColors.kError,
+                            onTap:     controller.navigateToPinRemove,
+                            isLast:    true,
+                          ),
+                        ],
+                      ],
+                    );
+                  }),
+
+                  Gap(R.h(context, 20)),
+
+                  // ── Preferences ───────────────────────────────
                   _SectionLabel(label: 'Preferences'),
                   Gap(R.h(context, 8)),
                   _SettingsCard(
                     children: [
                       _SettingsRow(
-                        icon: CupertinoIcons.chart_bar_circle,
+                        icon:  CupertinoIcons.chart_bar_circle,
                         label: 'Category Budgets',
-                        onTap: () => Get.toNamed(AppRoutes.budget),
+                        onTap: () =>
+                            Get.toNamed(AppRoutes.budget),
                       ),
                       _SettingsRow(
-                        icon: CupertinoIcons.arrow_down_doc,
-                        label: AppStrings.exportData,
-                        onTap: controller.exportCsv,
+                        icon:  CupertinoIcons.star_circle,
+                        label: 'Savings Goals',
+                        onTap: () =>
+                            Get.toNamed(AppRoutes.goals),
+                      ),
+                      _SettingsRow(
+                        icon:  CupertinoIcons.creditcard,
+                        label: 'EMI Tracker',
+                        onTap: () => Get.toNamed(AppRoutes.emi),
+                      ),
+                      _SettingsRow(
+                        icon:   CupertinoIcons.arrow_down_doc,
+                        label:  AppStrings.exportData,
+                        onTap:  controller.exportCsv,
                         isLast: true,
                       ),
                     ],
@@ -191,17 +231,18 @@ class ProfileScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Session section ────────────────────────────
+                  // ── Session ───────────────────────────────────
                   _SectionLabel(label: 'Session'),
                   Gap(R.h(context, 8)),
                   _SettingsCard(
                     children: [
                       _SettingsRow(
-                        icon: CupertinoIcons.square_arrow_right,
-                        label: AppStrings.logout,
-                        iconColor: AppColors.kError,
+                        icon:       CupertinoIcons.square_arrow_right,
+                        label:      AppStrings.logout,
+                        iconColor:  AppColors.kError,
                         labelColor: AppColors.kError,
-                        onTap: () => _showLogoutSheet(context, controller),
+                        onTap: () =>
+                            _showLogoutSheet(context, controller),
                         isLast: true,
                       ),
                     ],
@@ -209,23 +250,24 @@ class ProfileScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Danger zone ────────────────────────────────
+                  // ── Danger Zone ───────────────────────────────
                   _SectionLabel(
-                    label: 'Danger Zone',
+                    label:      'Danger Zone',
                     labelColor: AppColors.kError,
                   ),
                   Gap(R.h(context, 8)),
                   _SettingsCard(
-                    borderColor: AppColors.kError.withValues(alpha: 0.2),
+                    borderColor:
+                        AppColors.kError.withValues(alpha: 0.2),
                     children: [
                       _SettingsRow(
-                        icon: CupertinoIcons.trash,
-                        label: 'Delete Account',
-                        iconColor: AppColors.kError,
-                        labelColor: AppColors.kError,
-                        onTap: () =>
-                            _showDeleteAccountSheet(context, controller),
-                        isLast: true,
+                        icon:        CupertinoIcons.trash,
+                        label:       'Delete Account',
+                        iconColor:   AppColors.kError,
+                        labelColor:  AppColors.kError,
+                        onTap: () => _showDeleteAccountSheet(
+                            context, controller),
+                        isLast:      true,
                         showChevron: false,
                       ),
                     ],
@@ -242,12 +284,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ── Bottom sheets ─────────────────────────────────────────────
-
-  void _showEditNameSheet(BuildContext context, ProfileController controller) {
+  void _showEditNameSheet(
+      BuildContext context, ProfileController controller) {
     controller.nameController.text = controller.userName.value;
     showModalBottomSheet(
-      context: context,
+      context:         context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _EditNameSheet(controller: controller),
@@ -257,16 +298,17 @@ class ProfileScreen extends StatelessWidget {
   void _showChangePasswordSheet(
       BuildContext context, ProfileController controller) {
     showModalBottomSheet(
-      context: context,
+      context:         context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ChangePasswordSheet(controller: controller),
     );
   }
 
-  void _showLogoutSheet(BuildContext context, ProfileController controller) {
+  void _showLogoutSheet(
+      BuildContext context, ProfileController controller) {
     showModalBottomSheet(
-      context: context,
+      context:         context,
       backgroundColor: Colors.transparent,
       builder: (_) => _LogoutSheet(controller: controller),
     );
@@ -275,7 +317,7 @@ class ProfileScreen extends StatelessWidget {
   void _showDeleteAccountSheet(
       BuildContext context, ProfileController controller) {
     showModalBottomSheet(
-      context: context,
+      context:         context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DeleteAccountSheet(controller: controller),
@@ -295,7 +337,7 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label.toUpperCase(),
       style: AppTextStyles.labelMedium.copyWith(
-        color: labelColor ?? AppColors.kTextHint,
+        color:       labelColor ?? AppColors.kTextHint,
         letterSpacing: 0.8,
       ),
     );
@@ -306,14 +348,14 @@ class _SectionLabel extends StatelessWidget {
 
 class _SettingsCard extends StatelessWidget {
   final List<Widget> children;
-  final Color? borderColor;
+  final Color?       borderColor;
   const _SettingsCard({required this.children, this.borderColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.kCard,
+        color:  AppColors.kCard,
         borderRadius: AppRadius.card,
         border: Border.all(
           color: borderColor ?? AppColors.kBorder,
@@ -329,13 +371,13 @@ class _SettingsCard extends StatelessWidget {
 // ── Settings row ──────────────────────────────────────────────────
 
 class _SettingsRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
+  final IconData     icon;
+  final String       label;
   final VoidCallback onTap;
-  final Color? iconColor;
-  final Color? labelColor;
-  final bool isLast;
-  final bool showChevron;
+  final Color?       iconColor;
+  final Color?       labelColor;
+  final bool         isLast;
+  final bool         showChevron;
 
   const _SettingsRow({
     required this.icon,
@@ -343,28 +385,27 @@ class _SettingsRow extends StatelessWidget {
     required this.onTap,
     this.iconColor,
     this.labelColor,
-    this.isLast = false,
+    this.isLast     = false,
     this.showChevron = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDestructive = iconColor == AppColors.kError;
-
     return Column(
       children: [
         GestureDetector(
-          onTap: onTap,
+          onTap:    onTap,
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
-              vertical: R.h(context, 14),
+              vertical:   R.h(context, 14),
             ),
             child: Row(
               children: [
                 Container(
-                  width: R.w(context, 38),
+                  width:  R.w(context, 38),
                   height: R.w(context, 38),
                   decoration: BoxDecoration(
                     color: isDestructive
@@ -375,7 +416,7 @@ class _SettingsRow extends StatelessWidget {
                   child: Icon(
                     icon,
                     color: iconColor ?? AppColors.kPrimary,
-                    size: R.w(context, 17),
+                    size:  R.w(context, 17),
                   ),
                 ),
                 Gap(R.w(context, 12)),
@@ -391,7 +432,7 @@ class _SettingsRow extends StatelessWidget {
                   Icon(
                     CupertinoIcons.chevron_right,
                     color: AppColors.kTextHint,
-                    size: R.w(context, 16),
+                    size:  R.w(context, 16),
                   ),
               ],
             ),
@@ -401,7 +442,7 @@ class _SettingsRow extends StatelessWidget {
           const Divider(
             height: 1,
             indent: AppSpacing.lg + 38 + 12,
-            color: AppColors.kDivider,
+            color:  AppColors.kDivider,
           ),
       ],
     );
@@ -417,7 +458,7 @@ class _EditNameSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.all(R.w(context, 16)),
+      margin:  EdgeInsets.all(R.w(context, 16)),
       padding: EdgeInsets.fromLTRB(
         AppSpacing.xxl,
         AppSpacing.lg,
@@ -425,11 +466,11 @@ class _EditNameSheet extends StatelessWidget {
         MediaQuery.of(context).viewInsets.bottom + R.h(context, 24),
       ),
       decoration: const BoxDecoration(
-        color: AppColors.kCard,
+        color:        AppColors.kCard,
         borderRadius: AppRadius.modal,
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize:      MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SheetHandle(),
@@ -438,16 +479,16 @@ class _EditNameSheet extends StatelessWidget {
           Gap(R.h(context, 16)),
           TextField(
             controller: controller.nameController,
-            autofocus: true,
-            style: AppTextStyles.inputValue,
+            autofocus:  true,
+            style:      AppTextStyles.inputValue,
             decoration: InputDecoration(
-              hintText: 'Your full name',
+              hintText:  'Your full name',
               hintStyle: AppTextStyles.inputHint,
-              filled: true,
+              filled:    true,
               fillColor: AppColors.kInputFill,
               border: const OutlineInputBorder(
                 borderRadius: AppRadius.input,
-                borderSide: BorderSide(color: AppColors.kBorder),
+                borderSide:   BorderSide(color: AppColors.kBorder),
               ),
               focusedBorder: const OutlineInputBorder(
                 borderRadius: AppRadius.input,
@@ -456,33 +497,35 @@ class _EditNameSheet extends StatelessWidget {
               ),
               enabledBorder: const OutlineInputBorder(
                 borderRadius: AppRadius.input,
-                borderSide: BorderSide(color: AppColors.kBorder),
+                borderSide:   BorderSide(color: AppColors.kBorder),
               ),
             ),
             cursorColor: AppColors.kPrimary,
           ),
           Gap(R.h(context, 20)),
           Obx(() => SizedBox(
-                width: double.infinity,
+                width:  double.infinity,
                 height: R.h(context, 52),
                 child: ElevatedButton(
-                  onPressed:
-                      controller.isLoading.value ? null : controller.updateName,
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : controller.updateName,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.kPrimary,
-                    elevation: 0,
+                    elevation:       0,
                     shape: const RoundedRectangleBorder(
                       borderRadius: AppRadius.buttonLarge,
                     ),
                   ),
                   child: controller.isLoading.value
                       ? const SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 20, height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color:       Colors.white),
                         )
-                      : Text('Save', style: AppTextStyles.buttonPrimary),
+                      : Text('Save',
+                            style: AppTextStyles.buttonPrimary),
                 ),
               )),
         ],
@@ -500,7 +543,7 @@ class _ChangePasswordSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.all(R.w(context, 16)),
+      margin:  EdgeInsets.all(R.w(context, 16)),
       padding: EdgeInsets.fromLTRB(
         AppSpacing.xxl,
         AppSpacing.lg,
@@ -508,17 +551,18 @@ class _ChangePasswordSheet extends StatelessWidget {
         MediaQuery.of(context).viewInsets.bottom + R.h(context, 24),
       ),
       decoration: const BoxDecoration(
-        color: AppColors.kCard,
+        color:        AppColors.kCard,
         borderRadius: AppRadius.modal,
       ),
       child: SingleChildScrollView(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:      MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SheetHandle(),
             Gap(R.h(context, 20)),
-            Text('Change Password', style: AppTextStyles.headingSmall),
+            Text('Change Password',
+                style: AppTextStyles.headingSmall),
             Gap(R.h(context, 4)),
             Text(
               'Enter your current password to continue.',
@@ -526,23 +570,23 @@ class _ChangePasswordSheet extends StatelessWidget {
             ),
             Gap(R.h(context, 20)),
             _PasswordField(
-              label: 'Current Password',
+              label:      'Current Password',
               controller: controller.currentPasswordController,
-              autofocus: true,
+              autofocus:  true,
             ),
             Gap(R.h(context, 12)),
             _PasswordField(
-              label: 'New Password',
+              label:      'New Password',
               controller: controller.newPasswordController,
             ),
             Gap(R.h(context, 12)),
             _PasswordField(
-              label: 'Confirm New Password',
+              label:      'Confirm New Password',
               controller: controller.confirmPasswordController,
             ),
             Gap(R.h(context, 20)),
             Obx(() => SizedBox(
-                  width: double.infinity,
+                  width:  double.infinity,
                   height: R.h(context, 52),
                   child: ElevatedButton(
                     onPressed: controller.isLoading.value
@@ -550,20 +594,20 @@ class _ChangePasswordSheet extends StatelessWidget {
                         : controller.changePassword,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.kPrimary,
-                      elevation: 0,
+                      elevation:       0,
                       shape: const RoundedRectangleBorder(
                         borderRadius: AppRadius.buttonLarge,
                       ),
                     ),
                     child: controller.isLoading.value
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 20, height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color:       Colors.white),
                           )
                         : Text('Update Password',
-                            style: AppTextStyles.buttonPrimary),
+                              style: AppTextStyles.buttonPrimary),
                   ),
                 )),
           ],
@@ -572,8 +616,6 @@ class _ChangePasswordSheet extends StatelessWidget {
     );
   }
 }
-
-// ── Budget sheet ──────────────────────────────────────────────────
 
 // ── Logout sheet ──────────────────────────────────────────────────
 
@@ -584,15 +626,13 @@ class _LogoutSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.all(R.w(context, 16)),
+      margin:  EdgeInsets.all(R.w(context, 16)),
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        AppSpacing.lg,
-        AppSpacing.xxl,
-        R.h(context, 24),
+        AppSpacing.xxl, AppSpacing.lg,
+        AppSpacing.xxl, R.h(context, 24),
       ),
       decoration: const BoxDecoration(
-        color: AppColors.kCard,
+        color:        AppColors.kCard,
         borderRadius: AppRadius.modal,
       ),
       child: Column(
@@ -603,13 +643,11 @@ class _LogoutSheet extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(R.w(context, 16)),
             decoration: const BoxDecoration(
-              color: AppColors.kErrorBg,
-              shape: BoxShape.circle,
-            ),
+              color: AppColors.kErrorBg, shape: BoxShape.circle),
             child: Icon(
               CupertinoIcons.square_arrow_right,
               color: AppColors.kError,
-              size: R.w(context, 28),
+              size:  R.w(context, 28),
             ),
           ),
           Gap(R.h(context, 16)),
@@ -617,7 +655,7 @@ class _LogoutSheet extends StatelessWidget {
           Gap(R.h(context, 8)),
           Text(
             'You can log back in anytime.',
-            style: AppTextStyles.bodySmall,
+            style:     AppTextStyles.bodySmall,
             textAlign: TextAlign.center,
           ),
           Gap(R.h(context, 24)),
@@ -629,11 +667,13 @@ class _LogoutSheet extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => Get.back(),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.kBorder),
+                      side: const BorderSide(
+                          color: AppColors.kBorder),
                       shape: const RoundedRectangleBorder(
                           borderRadius: AppRadius.buttonLarge),
                     ),
-                    child: Text('Cancel', style: AppTextStyles.buttonSecondary),
+                    child: Text('Cancel',
+                        style: AppTextStyles.buttonSecondary),
                   ),
                 ),
               ),
@@ -645,11 +685,12 @@ class _LogoutSheet extends StatelessWidget {
                     onPressed: controller.logout,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.kError,
-                      elevation: 0,
+                      elevation:       0,
                       shape: const RoundedRectangleBorder(
                           borderRadius: AppRadius.buttonLarge),
                     ),
-                    child: Text('Log out', style: AppTextStyles.buttonPrimary),
+                    child: Text('Log out',
+                        style: AppTextStyles.buttonPrimary),
                   ),
                 ),
               ),
@@ -670,20 +711,19 @@ class _DeleteAccountSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.all(R.w(context, 16)),
+      margin:  EdgeInsets.all(R.w(context, 16)),
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        AppSpacing.lg,
+        AppSpacing.xxl, AppSpacing.lg,
         AppSpacing.xxl,
         MediaQuery.of(context).viewInsets.bottom + R.h(context, 24),
       ),
       decoration: const BoxDecoration(
-        color: AppColors.kCard,
+        color:        AppColors.kCard,
         borderRadius: AppRadius.modal,
       ),
       child: SingleChildScrollView(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:      MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SheetHandle(),
@@ -693,36 +733,38 @@ class _DeleteAccountSheet extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(R.w(context, 8)),
                   decoration: const BoxDecoration(
-                    color: AppColors.kErrorBg,
+                    color:        AppColors.kErrorBg,
                     borderRadius: AppRadius.tile,
                   ),
                   child: Icon(
                     CupertinoIcons.trash,
                     color: AppColors.kError,
-                    size: R.w(context, 20),
+                    size:  R.w(context, 20),
                   ),
                 ),
                 Gap(R.w(context, 12)),
-                Text('Delete Account',
-                    style: AppTextStyles.headingSmall.copyWith(
-                      color: AppColors.kError,
-                    )),
+                Text(
+                  'Delete Account',
+                  style: AppTextStyles.headingSmall.copyWith(
+                      color: AppColors.kError),
+                ),
               ],
             ),
             Gap(R.h(context, 12)),
             Text(
-              'This will permanently delete your account and all your transaction data. This action cannot be undone.',
+              'This will permanently delete your account and all '
+              'your transaction data. This action cannot be undone.',
               style: AppTextStyles.bodySmall,
             ),
             Gap(R.h(context, 20)),
             _PasswordField(
-              label: 'Enter your password to confirm',
+              label:      'Enter your password to confirm',
               controller: controller.deletePasswordController,
-              autofocus: true,
+              autofocus:  true,
             ),
             Gap(R.h(context, 20)),
             Obx(() => SizedBox(
-                  width: double.infinity,
+                  width:  double.infinity,
                   height: R.h(context, 52),
                   child: ElevatedButton(
                     onPressed: controller.isLoading.value
@@ -730,19 +772,19 @@ class _DeleteAccountSheet extends StatelessWidget {
                         : controller.deleteAccount,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.kError,
-                      elevation: 0,
+                      elevation:       0,
                       shape: const RoundedRectangleBorder(
                           borderRadius: AppRadius.buttonLarge),
                     ),
                     child: controller.isLoading.value
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 20, height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color:       Colors.white),
                           )
                         : Text('Delete My Account',
-                            style: AppTextStyles.buttonPrimary),
+                              style: AppTextStyles.buttonPrimary),
                   ),
                 )),
             Gap(R.h(context, 8)),
@@ -768,10 +810,10 @@ class _SheetHandle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: R.w(context, 40),
+        width:  R.w(context, 40),
         height: R.h(context, 4),
         decoration: const BoxDecoration(
-          color: AppColors.kBorder,
+          color:        AppColors.kBorder,
           borderRadius: AppRadius.pill,
         ),
       ),
@@ -780,9 +822,9 @@ class _SheetHandle extends StatelessWidget {
 }
 
 class _PasswordField extends StatefulWidget {
-  final String label;
+  final String               label;
   final TextEditingController controller;
-  final bool autofocus;
+  final bool                 autofocus;
 
   const _PasswordField({
     required this.label,
@@ -800,34 +842,38 @@ class _PasswordFieldState extends State<_PasswordField> {
   @override
   Widget build(BuildContext context) {
     return TextField(
-      controller: widget.controller,
-      autofocus: widget.autofocus,
+      controller:  widget.controller,
+      autofocus:   widget.autofocus,
       obscureText: _obscure,
-      style: AppTextStyles.inputValue,
+      style:       AppTextStyles.inputValue,
       decoration: InputDecoration(
-        labelText: widget.label,
+        labelText:  widget.label,
         labelStyle: AppTextStyles.inputLabel,
-        filled: true,
-        fillColor: AppColors.kInputFill,
+        filled:     true,
+        fillColor:  AppColors.kInputFill,
         suffixIcon: IconButton(
           icon: Icon(
-            _obscure ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
+            _obscure
+                ? CupertinoIcons.eye
+                : CupertinoIcons.eye_slash,
             color: AppColors.kTextHint,
-            size: R.w(context, 18),
+            size:  R.w(context, 18),
           ),
-          onPressed: () => setState(() => _obscure = !_obscure),
+          onPressed: () =>
+              setState(() => _obscure = !_obscure),
         ),
         border: const OutlineInputBorder(
           borderRadius: AppRadius.input,
-          borderSide: BorderSide(color: AppColors.kBorder),
+          borderSide:   BorderSide(color: AppColors.kBorder),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadius.input,
-          borderSide: BorderSide(color: AppColors.kBorderActive, width: 1.5),
+          borderSide:
+              BorderSide(color: AppColors.kBorderActive, width: 1.5),
         ),
         enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadius.input,
-          borderSide: BorderSide(color: AppColors.kBorder),
+          borderSide:   BorderSide(color: AppColors.kBorder),
         ),
       ),
       cursorColor: AppColors.kPrimary,

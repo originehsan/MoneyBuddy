@@ -5,44 +5,38 @@ import 'package:math_expressions/math_expressions.dart';
 import '../../../core/constants/app_colors.dart';
 import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
-import '../../speech/speech_service.dart';
 
 /// Manages transaction list, filtering, search, and add/edit/delete.
 class TransactionController extends GetxController {
-  final _service = TransactionService();
-  final _speechService = SpeechService();
-  final _parser = GrammarParser();
+  final _service   = TransactionService();
+  final _parser    = GrammarParser();
   final _evaluator = RealEvaluator();
 
   // ── List state ────────────────────────────────────────────────
-  final isLoading = true.obs;
+  final isLoading    = true.obs;
   final transactions = <TransactionModel>[].obs;
-  final filterIndex = 0.obs;
+  final filterIndex  = 0.obs;
   final errorMessage = ''.obs;
 
   // ── Search + filter ───────────────────────────────────────────
-  final searchQuery = ''.obs;
+  final searchQuery      = ''.obs;
   final searchController = TextEditingController();
-  final isSearching = false.obs;
-  final dateFrom = Rxn<DateTime>();
-  final dateTo = Rxn<DateTime>();
+  final isSearching      = false.obs;
+  final dateFrom         = Rxn<DateTime>();
+  final dateTo           = Rxn<DateTime>();
 
   // ── Add/Edit form state ───────────────────────────────────────
-  final isSubmitting = false.obs;
-  final isExpense = true.obs;
-  final amountController = TextEditingController();
-  final descController = TextEditingController();
-  final selectedDate = DateTime.now().obs;
-  final selectedCategory = 'Other'.obs;
-  final calculatorResult = ''.obs;
+  final isSubmitting      = false.obs;
+  final isExpense         = true.obs;
+  final amountController  = TextEditingController();
+  final descController    = TextEditingController();
+  final selectedDate      = DateTime.now().obs;
+  final selectedCategory  = 'Other'.obs;
+  final calculatorResult  = ''.obs;
 
   // ── Edit mode ─────────────────────────────────────────────────
-  final isEditMode = false.obs;
+  final isEditMode  = false.obs;
   final editingTxId = ''.obs;
-
-  // ── Voice input ───────────────────────────────────────────────
-  final isListening = false.obs;
-  final voiceText = ''.obs;
 
   @override
   void onInit() {
@@ -57,7 +51,7 @@ class TransactionController extends GetxController {
   // ── Load ──────────────────────────────────────────────────────
 
   Future<void> loadTransactions() async {
-    isLoading.value = true;
+    isLoading.value    = true;
     errorMessage.value = '';
     try {
       final list = await _service.getTransactions();
@@ -74,7 +68,6 @@ class TransactionController extends GetxController {
   List<TransactionModel> get filteredTransactions {
     var list = transactions.toList();
 
-    // Type filter
     switch (filterIndex.value) {
       case 1:
         list = list.where((t) => t.isIncome).toList();
@@ -84,7 +77,6 @@ class TransactionController extends GetxController {
         break;
     }
 
-    // Search filter
     final q = searchQuery.value.toLowerCase().trim();
     if (q.isNotEmpty) {
       list = list
@@ -95,9 +87,10 @@ class TransactionController extends GetxController {
           .toList();
     }
 
-    // Date range filter
     if (dateFrom.value != null) {
-      list = list.where((t) => !t.date.isBefore(dateFrom.value!)).toList();
+      list = list
+          .where((t) => !t.date.isBefore(dateFrom.value!))
+          .toList();
     }
     if (dateTo.value != null) {
       final end = dateTo.value!.add(const Duration(days: 1));
@@ -117,10 +110,10 @@ class TransactionController extends GetxController {
   }
 
   String _dateKey(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final now    = DateTime.now();
+    final today  = DateTime(now.year, now.month, now.day);
     final target = DateTime(date.year, date.month, date.day);
-    final diff = today.difference(target).inDays;
+    final diff   = today.difference(target).inDays;
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Yesterday';
     return '${date.day}/${date.month}/${date.year}';
@@ -128,16 +121,17 @@ class TransactionController extends GetxController {
 
   void clearSearch() {
     searchController.clear();
-    searchQuery.value = '';
-    isSearching.value = false;
+    searchQuery.value  = '';
+    isSearching.value  = false;
   }
 
   void clearDateFilter() {
     dateFrom.value = null;
-    dateTo.value = null;
+    dateTo.value   = null;
   }
 
-  bool get hasActiveFilter => dateFrom.value != null || dateTo.value != null;
+  bool get hasActiveFilter =>
+      dateFrom.value != null || dateTo.value != null;
 
   // ── Calculator ────────────────────────────────────────────────
 
@@ -148,7 +142,8 @@ class TransactionController extends GetxController {
       return;
     }
     try {
-      final result = _evaluator.evaluate(_parser.parse(text)).toDouble();
+      final result =
+          _evaluator.evaluate(_parser.parse(text)).toDouble();
       calculatorResult.value = '= ${result.toStringAsFixed(2)}';
     } catch (_) {
       calculatorResult.value = '';
@@ -168,54 +163,7 @@ class TransactionController extends GetxController {
     return double.tryParse(text);
   }
 
-  // ── Voice input ───────────────────────────────────────────────
-
-  Future<void> toggleVoiceInput() async {
-    if (isListening.value) {
-      await _speechService.stopListening();
-      isListening.value = false;
-
-      // Parse the final voice text
-      if (voiceText.value.isNotEmpty) {
-        final parsed = SpeechService.parse(voiceText.value);
-        if (parsed.amount != null) {
-          amountController.text = parsed.amount!.toStringAsFixed(0);
-        }
-        if (parsed.description.isNotEmpty) {
-          descController.text = parsed.description;
-        }
-        isExpense.value = !parsed.isIncome;
-        voiceText.value = '';
-      }
-    } else {
-      final available = await _speechService.initialize();
-      if (!available) {
-        _showError('Microphone not available');
-        return;
-      }
-      isListening.value = true;
-      voiceText.value = '';
-      await _speechService.startListening(
-        onResult: (text) => voiceText.value = text,
-        onDone: () {
-          isListening.value = false;
-          if (voiceText.value.isNotEmpty) {
-            final parsed = SpeechService.parse(voiceText.value);
-            if (parsed.amount != null) {
-              amountController.text = parsed.amount!.toStringAsFixed(0);
-            }
-            if (parsed.description.isNotEmpty) {
-              descController.text = parsed.description;
-            }
-            isExpense.value = !parsed.isIncome;
-            voiceText.value = '';
-          }
-        },
-      );
-    }
-  }
-
-  // ── Submit (add or edit) ──────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────
 
   Future<void> submitTransaction() async {
     final amount = resolvedAmount;
@@ -233,21 +181,21 @@ class TransactionController extends GetxController {
       bool success;
       if (isEditMode.value) {
         success = await _service.editTransaction(
-          id: editingTxId.value,
-          type: isExpense.value ? 'Expense' : 'Income',
-          amount: amount,
+          id:          editingTxId.value,
+          type:        isExpense.value ? 'Expense' : 'Income',
+          amount:      amount,
           description: descController.text.trim(),
-          date: selectedDate.value.toIso8601String(),
-          category: selectedCategory.value,
+          date:        selectedDate.value.toIso8601String(),
+          category:    selectedCategory.value,
         );
         if (success) _showSuccess('Transaction updated');
       } else {
         success = await _service.addTransaction(
-          type: isExpense.value ? 'Expense' : 'Income',
-          amount: amount,
+          type:        isExpense.value ? 'Expense' : 'Income',
+          amount:      amount,
           description: descController.text.trim(),
-          date: selectedDate.value.toIso8601String(),
-          category: selectedCategory.value,
+          date:        selectedDate.value.toIso8601String(),
+          category:    selectedCategory.value,
         );
         if (success) _showSuccess('Transaction added');
       }
@@ -271,12 +219,12 @@ class TransactionController extends GetxController {
   // ── Edit ──────────────────────────────────────────────────────
 
   void startEdit(TransactionModel tx) {
-    isEditMode.value = true;
-    editingTxId.value = tx.id;
-    isExpense.value = !tx.isIncome;
+    isEditMode.value      = true;
+    editingTxId.value     = tx.id;
+    isExpense.value       = !tx.isIncome;
     amountController.text = tx.amount.toStringAsFixed(0);
-    descController.text = tx.description;
-    selectedDate.value = tx.date;
+    descController.text   = tx.description;
+    selectedDate.value    = tx.date;
     selectedCategory.value = tx.category ?? 'Other';
   }
 
@@ -297,16 +245,14 @@ class TransactionController extends GetxController {
   // ── Reset ─────────────────────────────────────────────────────
 
   void _resetForm() {
-    isEditMode.value = false;
-    editingTxId.value = '';
+    isEditMode.value      = false;
+    editingTxId.value     = '';
     amountController.clear();
     descController.clear();
-    selectedDate.value = DateTime.now();
+    selectedDate.value    = DateTime.now();
     selectedCategory.value = 'Other';
-    isExpense.value = true;
+    isExpense.value       = true;
     calculatorResult.value = '';
-    voiceText.value = '';
-    isListening.value = false;
   }
 
   void resetForm() => _resetForm();
@@ -317,16 +263,16 @@ class TransactionController extends GetxController {
         'Error',
         msg,
         backgroundColor: AppColors.kError,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
       );
 
   void _showSuccess(String msg) => Get.snackbar(
         'Success',
         msg,
         backgroundColor: AppColors.kSuccess,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
       );
 
   @override

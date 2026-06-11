@@ -1,4 +1,5 @@
 // MoneyBuddy
+import 'dart:io';
 import 'package:board_datetime_picker/board_datetime_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/buttons/primary_button.dart';
 import '../../../shared/widgets/inputs/app_text_field.dart';
 import '../../../shared/widgets/misc/category_chip.dart';
+import '../../../features/receipt_scanner/receipt_scanner_service.dart';
 import '../controllers/transaction_controller.dart';
 
 class AddTransactionScreen extends StatelessWidget {
@@ -90,7 +92,23 @@ class AddTransactionScreen extends StatelessWidget {
                               ),
                             )),
                         const Spacer(),
-                        const SizedBox(width: 36),
+                        // ── Camera button ──────────────────────
+                        GestureDetector(
+                          onTap: () =>
+                              _showScanOptions(context, controller),
+                          child: Container(
+                            padding: EdgeInsets.all(R.w(context, 8)),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: AppRadius.tile,
+                            ),
+                            child: Icon(
+                              CupertinoIcons.camera,
+                              color: Colors.white,
+                              size: R.w(context, 20),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
 
@@ -124,7 +142,7 @@ class AddTransactionScreen extends StatelessWidget {
 
                     Gap(R.h(context, 16)),
 
-                    // ── Amount + Mic row ───────────────────────
+                    // ── Amount ─────────────────────────────────
                     Text(
                       'How much?',
                       style: AppTextStyles.bodyMedium.copyWith(
@@ -133,82 +151,22 @@ class AddTransactionScreen extends StatelessWidget {
                     ),
                     Gap(R.h(context, 4)),
 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: controller.amountController,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true),
-                            style: AppTextStyles.displayLarge,
-                            textAlign: TextAlign.center,
-                            decoration: InputDecoration(
-                              hintText: '₹0',
-                              hintStyle:
-                                  AppTextStyles.displayLarge.copyWith(
-                                color: Colors.white38,
-                              ),
-                              border: InputBorder.none,
-                              filled: false,
-                            ),
-                            cursorColor: Colors.white,
-                          ),
+                    TextField(
+                      controller: controller.amountController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      style: AppTextStyles.displayLarge,
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        hintText: '₹0',
+                        hintStyle: AppTextStyles.displayLarge.copyWith(
+                          color: Colors.white38,
                         ),
-
-                        // ── Mic button ─────────────────────────
-                        Obx(() => GestureDetector(
-                              onTap: controller.toggleVoiceInput,
-                              child: AnimatedContainer(
-                                duration:
-                                    const Duration(milliseconds: 200),
-                                padding: EdgeInsets.all(R.w(context, 10)),
-                                decoration: BoxDecoration(
-                                  color: controller.isListening.value
-                                      ? Colors.red.withValues(alpha: 0.8)
-                                      : Colors.white.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  controller.isListening.value
-                                      ? CupertinoIcons.stop_fill
-                                      : CupertinoIcons.mic,
-                                  color: Colors.white,
-                                  size: R.w(context, 20),
-                                ),
-                              ),
-                            )),
-                      ],
+                        border:  InputBorder.none,
+                        filled:  false,
+                      ),
+                      cursorColor: Colors.white,
                     ),
-
-                    // Voice listening indicator
-                    Obx(() {
-                      if (!controller.isListening.value &&
-                          controller.voiceText.value.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return Column(
-                        children: [
-                          if (controller.isListening.value)
-                            Text(
-                              'Listening...',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.white70,
-                              ),
-                            ),
-                          if (controller.voiceText.value.isNotEmpty)
-                            Text(
-                              '"${controller.voiceText.value}"',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.white60,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      );
-                    }),
 
                     // Calculator result
                     Obx(() =>
@@ -261,7 +219,7 @@ class AddTransactionScreen extends StatelessWidget {
                         ? _expenseCategories
                         : _incomeCategories;
                     return Wrap(
-                      spacing: 8,
+                      spacing:    8,
                       runSpacing: 8,
                       children: cats.map((cat) => CategoryChip(
                             category: cat,
@@ -286,7 +244,7 @@ class AddTransactionScreen extends StatelessWidget {
                             vertical:   AppSpacing.md,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.kInputFill,
+                            color:        AppColors.kInputFill,
                             borderRadius: AppRadius.input,
                             border: Border.all(color: AppColors.kBorder),
                           ),
@@ -295,7 +253,7 @@ class AddTransactionScreen extends StatelessWidget {
                               Icon(
                                 CupertinoIcons.calendar,
                                 color: AppColors.kTextHint,
-                                size: 18,
+                                size:  18,
                               ),
                               const Gap(8),
                               Text(
@@ -330,13 +288,234 @@ class AddTransactionScreen extends StatelessWidget {
     );
   }
 
+  // ── Scan Options Sheet ────────────────────────────────────────
+
+  void _showScanOptions(
+      BuildContext context, TransactionController controller) {
+    showModalBottomSheet(
+      context:         context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color:        AppColors.kCard,
+          borderRadius: AppRadius.modal,
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              // Handle
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: const BoxDecoration(
+                    color:        AppColors.kBorder,
+                    borderRadius: AppRadius.pill,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color:        AppColors.kPrimaryTint,
+                        borderRadius: AppRadius.tile,
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.camera,
+                        color: AppColors.kPrimary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Scan Receipt',
+                            style: AppTextStyles.headingSmall),
+                        Text(
+                          'Auto-fill amount from receipt',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              const Divider(height: 1, color: AppColors.kDivider),
+
+              // Camera option
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical:   4,
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color:        AppColors.kPrimaryTint,
+                      borderRadius: AppRadius.tile,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.camera_fill,
+                      color: AppColors.kPrimary,
+                      size: 18,
+                    ),
+                  ),
+                  title: Text('Take Photo',
+                      style: AppTextStyles.labelLarge),
+                  subtitle: Text('Use camera to scan receipt',
+                      style: AppTextStyles.bodySmall),
+                  trailing: const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: AppColors.kTextHint,
+                    size: 16,
+                  ),
+                  onTap: () {
+                    Get.back();
+                    _scanFromCamera(context, controller);
+                  },
+                ),
+              ),
+
+              const Divider(
+                  height: 1,
+                  indent: AppSpacing.lg + 44,
+                  color: AppColors.kDivider),
+
+              // Gallery option
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical:   4,
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.kInfo.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.tile,
+                    ),
+                    child: Icon(
+                      CupertinoIcons.photo,
+                      color: AppColors.kInfo,
+                      size: 18,
+                    ),
+                  ),
+                  title: Text('Choose from Gallery',
+                      style: AppTextStyles.labelLarge),
+                  subtitle: Text('Pick existing receipt photo',
+                      style: AppTextStyles.bodySmall),
+                  trailing: const Icon(
+                    CupertinoIcons.chevron_right,
+                    color: AppColors.kTextHint,
+                    size: 16,
+                  ),
+                  onTap: () {
+                    Get.back();
+                    _scanFromGallery(context, controller);
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Scanner logic ─────────────────────────────────────────────
+
+  Future<void> _scanFromCamera(
+      BuildContext context, TransactionController controller) async {
+    final file = await ReceiptScannerService.pickFromCamera();
+    if (file == null) return;
+    if (context.mounted) _processFile(context, controller, file);
+  }
+
+  Future<void> _scanFromGallery(
+      BuildContext context, TransactionController controller) async {
+    final file = await ReceiptScannerService.pickFromGallery();
+    if (file == null) return;
+    if (context.mounted) _processFile(context, controller, file);
+  }
+
+  Future<void> _processFile(
+    BuildContext context,
+    TransactionController controller,
+    File file,
+  ) async {
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(color: AppColors.kPrimary),
+      ),
+      barrierDismissible: false,
+    );
+
+    final result = await ReceiptScannerService.scanReceipt(file);
+    Get.back();
+
+    if (result == null) {
+      Get.snackbar(
+        'Scan Failed',
+        'Could not read receipt. Try a clearer photo.',
+        backgroundColor: AppColors.kError,
+        colorText:       Colors.white,
+        snackPosition:   SnackPosition.BOTTOM,
+        margin:          const EdgeInsets.all(16),
+        borderRadius:    12,
+      );
+      return;
+    }
+
+    if (result.amount != null) {
+      controller.amountController.text =
+          result.amount!.toStringAsFixed(0);
+    }
+    if (result.description.isNotEmpty) {
+      controller.descController.text = result.description;
+    }
+
+    Get.snackbar(
+      'Receipt Scanned',
+      result.amount != null
+          ? 'Found ₹${result.amount!.toStringAsFixed(0)}'
+            ' — ${result.description}'
+          : 'Description filled. Enter amount manually.',
+      backgroundColor: AppColors.kSuccess,
+      colorText:       Colors.white,
+      snackPosition:   SnackPosition.BOTTOM,
+      margin:          const EdgeInsets.all(16),
+      borderRadius:    12,
+      duration:        const Duration(seconds: 3),
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+
   Future<void> _pickDate(
     BuildContext context,
     TransactionController controller,
   ) async {
     final date = await showBoardDateTimePicker(
-      context: context,
-      pickerType: DateTimePickerType.datetime,
+      context:     context,
+      pickerType:  DateTimePickerType.datetime,
       initialDate: controller.selectedDate.value,
       options: const BoardDateTimeOptions(
         languages: BoardPickerLanguages(
@@ -351,12 +530,13 @@ class AddTransactionScreen extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    if (date.day == now.day &&
+    if (date.day   == now.day &&
         date.month == now.month &&
-        date.year == now.year) {
+        date.year  == now.year) {
       return 'Today, ${_timeString(date)}';
     }
-    return '${date.day}/${date.month}/${date.year}, ${_timeString(date)}';
+    return '${date.day}/${date.month}/${date.year},'
+        ' ${_timeString(date)}';
   }
 
   String _timeString(DateTime date) {
@@ -367,9 +547,11 @@ class AddTransactionScreen extends StatelessWidget {
   }
 }
 
+// ── Toggle Tab ────────────────────────────────────────────────────
+
 class _ToggleTab extends StatelessWidget {
-  final String label;
-  final bool isActive;
+  final String       label;
+  final bool         isActive;
   final VoidCallback onTap;
 
   const _ToggleTab({
@@ -386,7 +568,7 @@ class _ToggleTab extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
+          color:        isActive ? Colors.white : Colors.transparent,
           borderRadius: AppRadius.pill,
         ),
         child: Text(
