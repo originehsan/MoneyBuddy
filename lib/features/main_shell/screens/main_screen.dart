@@ -1,4 +1,5 @@
 // MoneyBuddy
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -9,11 +10,11 @@ import '../../home/screens/home_screen.dart';
 import '../../transactions/screens/transaction_screen.dart';
 import '../../analytics/screens/analytics_screen.dart';
 import '../../groups/screens/group_screen.dart';
-import '../../profile/screens/profile_screen.dart';
 import '../controllers/main_controller.dart';
 
-/// Root shell screen that holds the 4-tab bottom navigation.
-/// FAB in the center triggers add transaction sheet.
+/// Root shell — 4-tab bottom navigation.
+/// Profile accessed via avatar tap on home screen header.
+/// FAB in center triggers add transaction.
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
@@ -22,14 +23,12 @@ class MainScreen extends StatelessWidget {
     const TransactionScreen(),
     const AnalyticsScreen(),
     const GroupScreen(),
-    const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MainController>();
 
-    // Force light status bar on main screen
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
@@ -55,9 +54,11 @@ class MainScreen extends StatelessWidget {
   }
 }
 
-/// Floating action button for quick add transaction.
+// ── FAB ───────────────────────────────────────────────────────────
+
 class _FAB extends StatelessWidget {
   const _FAB();
+
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton(
@@ -68,15 +69,19 @@ class _FAB extends StatelessWidget {
       backgroundColor: AppColors.kPrimary,
       elevation: 4,
       shape: const CircleBorder(),
-      child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      child: const Icon(
+        CupertinoIcons.add,
+        color: Colors.white,
+        size: 26,
+      ),
     );
   }
 }
 
-/// Bottom navigation bar with 4 tabs + center FAB space.
+// ── Bottom Nav ────────────────────────────────────────────────────
+
 class _BottomNav extends StatelessWidget {
   final MainController controller;
-
   const _BottomNav({required this.controller});
 
   @override
@@ -106,14 +111,16 @@ class _BottomNav extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _NavItem(
-                    icon: Icons.home_rounded,
+                    icon: CupertinoIcons.house,
+                    activeIcon: CupertinoIcons.house_fill,
                     label: 'Home',
                     index: 0,
                     currentIndex: controller.currentIndex.value,
                     onTap: () => controller.changeTab(0),
                   ),
                   _NavItem(
-                    icon: Icons.receipt_long_rounded,
+                    icon: CupertinoIcons.doc_text,
+                    activeIcon: CupertinoIcons.doc_text_fill,
                     label: 'Transactions',
                     index: 1,
                     currentIndex: controller.currentIndex.value,
@@ -124,14 +131,16 @@ class _BottomNav extends StatelessWidget {
                   const SizedBox(width: 56),
 
                   _NavItem(
-                    icon: Icons.bar_chart_rounded,
+                    icon: CupertinoIcons.chart_bar,
+                    activeIcon: CupertinoIcons.chart_bar_fill,
                     label: 'Analytics',
                     index: 2,
                     currentIndex: controller.currentIndex.value,
                     onTap: () => controller.changeTab(2),
                   ),
                   _NavItem(
-                    icon: Icons.group_rounded,
+                    icon: CupertinoIcons.person_3,
+                    activeIcon: CupertinoIcons.person_3_fill,
                     label: 'Groups',
                     index: 3,
                     currentIndex: controller.currentIndex.value,
@@ -145,9 +154,11 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-/// Single bottom nav item with active/inactive states.
+// ── Nav Item ──────────────────────────────────────────────────────
+
 class _NavItem extends StatelessWidget {
   final IconData icon;
+  final IconData activeIcon;
   final String label;
   final int index;
   final int currentIndex;
@@ -155,6 +166,7 @@ class _NavItem extends StatelessWidget {
 
   const _NavItem({
     required this.icon,
+    required this.activeIcon,
     required this.label,
     required this.index,
     required this.currentIndex,
@@ -166,7 +178,10 @@ class _NavItem extends StatelessWidget {
     final isActive = currentIndex == index;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 64,
@@ -181,7 +196,7 @@ class _NavItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
-                icon,
+                isActive ? activeIcon : icon,
                 color: isActive ? AppColors.kPrimary : AppColors.kTextHint,
                 size: 22,
               ),

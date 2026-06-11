@@ -39,15 +39,15 @@ class GroupScreen extends StatelessWidget {
           }
 
           return RefreshIndicator(
-            color: AppColors.kPrimary,
+            color:     AppColors.kPrimary,
             onRefresh: controller.loadGroups,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // ── Header ──────────────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: AppSpacing.horizontalScreen.copyWith(top: 20),
+                    padding:
+                        AppSpacing.horizontalScreen.copyWith(top: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -63,13 +63,13 @@ class GroupScreen extends StatelessWidget {
                           child: Container(
                             padding: EdgeInsets.all(R.w(context, 8)),
                             decoration: const BoxDecoration(
-                              color: AppColors.kPrimaryTint,
+                              color:        AppColors.kPrimaryTint,
                               borderRadius: AppRadius.tile,
                             ),
                             child: Icon(
                               CupertinoIcons.add,
                               color: AppColors.kPrimary,
-                              size: R.w(context, 20),
+                              size:  R.w(context, 20),
                             ),
                           ),
                         ),
@@ -81,10 +81,10 @@ class GroupScreen extends StatelessWidget {
                 controller.groups.isEmpty
                     ? SliverFillRemaining(
                         child: EmptyState(
-                          icon: CupertinoIcons.person_3,
-                          title: AppStrings.noGroups,
-                          subtitle: AppStrings.noGroupsDesc,
-                          buttonText: AppStrings.createGroup,
+                          icon:        CupertinoIcons.person_3,
+                          title:       AppStrings.noGroups,
+                          subtitle:    AppStrings.noGroupsDesc,
+                          buttonText:  AppStrings.createGroup,
                           onButtonPressed: () {
                             controller.resetGroupForm();
                             Get.toNamed(AppRoutes.addGroup);
@@ -92,13 +92,13 @@ class GroupScreen extends StatelessWidget {
                         ),
                       )
                     : SliverPadding(
-                        padding: AppSpacing.horizontalScreen.copyWith(top: 20),
+                        padding: AppSpacing.horizontalScreen
+                            .copyWith(top: 20),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (_, i) => Padding(
                               padding: EdgeInsets.only(
-                                bottom: R.h(context, 12),
-                              ),
+                                  bottom: R.h(context, 12)),
                               child: _GroupCard(
                                 group:      controller.groups[i],
                                 index:      i,
@@ -118,16 +118,16 @@ class GroupScreen extends StatelessWidget {
   }
 
   Widget _buildShimmer(BuildContext context) {
-    return Padding(
-      padding: AppSpacing.screenPadding,
-      child: Column(
-        children: List.generate(
-          3,
-          (_) => Padding(
-            padding: EdgeInsets.only(bottom: R.h(context, 12)),
-            child: ShimmerWidget(
-              width: double.infinity,
-              height: R.h(context, 130),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: AppSpacing.screenPadding,
+        child: Column(
+          children: List.generate(
+            3,
+            (_) => Padding(
+              padding: EdgeInsets.only(bottom: R.h(context, 12)),
+              child: ShimmerWidget(
+                  width: double.infinity, height: R.h(context, 130)),
             ),
           ),
         ),
@@ -137,9 +137,9 @@ class GroupScreen extends StatelessWidget {
 }
 
 class _GroupCard extends StatelessWidget {
-  final GroupModel group;
-  final int index;
-  final GroupController controller;
+  final GroupModel       group;
+  final int              index;
+  final GroupController  controller;
 
   const _GroupCard({
     required this.group,
@@ -149,20 +149,7 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalExpense = group.transactions.fold<double>(
-      0, (sum, t) => sum + t.amount,
-    );
-
-    // Paid/unpaid progress
-    int totalSplits = 0;
-    int paidSplits  = 0;
-    for (final tx in group.transactions) {
-      totalSplits += tx.splitDetails.length;
-      paidSplits  += tx.splitDetails.where((s) => s.paid).length;
-    }
-    final paidPercent = totalSplits > 0
-        ? paidSplits / totalSplits
-        : 0.0;
+    final paidPercent = group.settledPercent;
 
     return GestureDetector(
       onTap: () {
@@ -179,30 +166,29 @@ class _GroupCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.kCard,
+          color:        AppColors.kCard,
           borderRadius: AppRadius.card,
           border: Border.all(color: AppColors.kBorder, width: 0.8),
-          boxShadow: AppShadows.card,
+          boxShadow:    AppShadows.card,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // ── Title row ──────────────────────────────────────
+            // ── Title + 3-dot (top right) ───────────────────────
             Row(
               children: [
-                // Group icon
                 Container(
                   width:  R.w(context, 44),
                   height: R.w(context, 44),
                   decoration: const BoxDecoration(
-                    gradient: AppColors.kBalanceGradient,
+                    gradient:     AppColors.kBalanceGradient,
                     borderRadius: AppRadius.tile,
                   ),
                   child: Icon(
                     CupertinoIcons.person_3_fill,
                     color: Colors.white,
-                    size: R.w(context, 20),
+                    size:  R.w(context, 20),
                   ),
                 ),
                 Gap(R.w(context, 12)),
@@ -226,48 +212,46 @@ class _GroupCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Total + options
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      AppFormatters.formatCurrencyCompact(totalExpense),
-                      style: AppTextStyles.moneyMedium.copyWith(
-                        color: AppColors.kExpense,
-                      ),
+                // 3-dot at top right
+                GestureDetector(
+                  onTap: () => _showOptions(context),
+                  child: Padding(
+                    padding: EdgeInsets.all(R.w(context, 4)),
+                    child: Icon(
+                      CupertinoIcons.ellipsis,
+                      size:  R.w(context, 18),
+                      color: AppColors.kTextHint,
                     ),
-                    Gap(R.h(context, 2)),
-                    // 3-dot menu
-                    GestureDetector(
-                      onTap: () => _showOptions(context),
-                      child: Icon(
-                        CupertinoIcons.ellipsis,
-                        size: R.w(context, 18),
-                        color: AppColors.kTextHint,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
 
             Gap(R.h(context, 12)),
 
-            // ── Member avatar stack ────────────────────────────
-            _MemberAvatarStack(
-              members: group.members,
-              context: context,
+            // ── Total expense ────────────────────────────────────
+            Text(
+              AppFormatters.formatCurrency(group.totalExpense),
+              style: AppTextStyles.moneyMedium.copyWith(
+                color: AppColors.kExpense,
+              ),
             ),
+
+            Gap(R.h(context, 10)),
+
+            // ── Member avatar stack ──────────────────────────────
+            _MemberAvatarStack(members: group.members),
 
             Gap(R.h(context, 12)),
 
-            // ── Paid progress bar ──────────────────────────────
-            if (totalSplits > 0) ...[
+            // ── Progress bar ─────────────────────────────────────
+            if (group.totalSettlements > 0) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '$paidSplits/$totalSplits settled',
+                    '${group.paidSettlements}/'
+                    '${group.totalSettlements} settled',
                     style: AppTextStyles.labelSmall,
                   ),
                   Text(
@@ -284,8 +268,8 @@ class _GroupCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: AppRadius.pill,
                 child: LinearProgressIndicator(
-                  value: paidPercent,
-                  minHeight: 5,
+                  value:      paidPercent,
+                  minHeight:  5,
                   backgroundColor: AppColors.kSurface,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     paidPercent >= 1.0
@@ -300,30 +284,31 @@ class _GroupCard extends StatelessWidget {
             const Divider(height: 1, color: AppColors.kDivider),
             Gap(R.h(context, 10)),
 
-            // ── Footer row ─────────────────────────────────────
+            // ── Footer ───────────────────────────────────────────
             Row(
               children: [
                 Icon(
                   CupertinoIcons.doc_text,
-                  size: R.w(context, 13),
+                  size:  R.w(context, 13),
                   color: AppColors.kTextHint,
                 ),
                 Gap(R.w(context, 4)),
                 Text(
-                  '${group.transactions.length} expenses',
+                  '${group.expenses.length} expenses',
                   style: AppTextStyles.labelSmall,
                 ),
                 const Spacer(),
-                // Quick add expense
                 GestureDetector(
                   onTap: () {
                     controller.resetExpenseForm();
                     controller.selectedGroupId.value = group.id;
+                    controller.initExpenseDefaults(group);
                     Get.toNamed(
                       AppRoutes.addGroupTransaction,
                       arguments: {
                         'groupId':    group.id,
                         'groupTitle': group.title,
+                        'group':      group,
                       },
                     );
                   },
@@ -333,7 +318,7 @@ class _GroupCard extends StatelessWidget {
                       vertical:   R.h(context, 4),
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.kPrimaryTint,
+                      color:        AppColors.kPrimaryTint,
                       borderRadius: AppRadius.pill,
                     ),
                     child: Row(
@@ -341,7 +326,7 @@ class _GroupCard extends StatelessWidget {
                       children: [
                         Icon(
                           CupertinoIcons.add,
-                          size: R.w(context, 12),
+                          size:  R.w(context, 12),
                           color: AppColors.kPrimary,
                         ),
                         Gap(R.w(context, 4)),
@@ -368,60 +353,71 @@ class _GroupCard extends StatelessWidget {
 
   void _showOptions(BuildContext context) {
     showModalBottomSheet(
-      context: context,
+      context:         context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        margin: EdgeInsets.all(R.w(context, 16)),
-        decoration: const BoxDecoration(
-          color: AppColors.kCard,
-          borderRadius: AppRadius.modal,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Gap(R.h(context, 8)),
-            Container(
-              width: R.w(context, 40),
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.kBorder,
-                borderRadius: AppRadius.pill,
-              ),
-            ),
-            Gap(R.h(context, 16)),
-            // Edit
-            ListTile(
-              leading: const Icon(
-                CupertinoIcons.pencil,
-                color: AppColors.kTextPrimary,
-              ),
-              title: Text('Edit Group', style: AppTextStyles.bodyMedium),
-              onTap: () {
-                Get.back();
-                controller.startEditGroup(group);
-                Get.toNamed(AppRoutes.addGroup);
-              },
-            ),
-            const Divider(height: 1, color: AppColors.kDivider),
-            // Delete
-            ListTile(
-              leading: const Icon(
-                CupertinoIcons.trash,
-                color: AppColors.kError,
-              ),
-              title: Text(
-                'Delete Group',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.kError,
+      builder: (ctx) => SafeArea(
+        child: Container(
+          margin: EdgeInsets.all(R.w(context, 16)),
+          decoration: const BoxDecoration(
+            color:        AppColors.kCard,
+            borderRadius: AppRadius.modal,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Gap(R.h(context, 8)),
+              Center(
+                child: Container(
+                  width:  R.w(context, 40),
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color:        AppColors.kBorder,
+                    borderRadius: AppRadius.pill,
+                  ),
                 ),
               ),
-              onTap: () {
-                Get.back();
-                _confirmDelete(context);
-              },
-            ),
-            Gap(R.h(context, 16)),
-          ],
+              Gap(R.h(context, 16)),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: const Icon(
+                    CupertinoIcons.pencil,
+                    color: AppColors.kTextPrimary,
+                  ),
+                  title: Text(
+                    'Edit Group',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  onTap: () {
+                    Get.back();
+                    controller.startEditGroup(group);
+                    Get.toNamed(AppRoutes.addGroup);
+                  },
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.kDivider),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: const Icon(
+                    CupertinoIcons.trash,
+                    color: AppColors.kError,
+                  ),
+                  title: Text(
+                    'Delete Group',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.kError,
+                    ),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    _confirmDelete(context);
+                  },
+                ),
+              ),
+              Gap(R.h(context, 16)),
+            ],
+          ),
         ),
       ),
     );
@@ -432,17 +428,20 @@ class _GroupCard extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.card,
+            borderRadius: AppRadius.card),
+        title: Text(
+          'Delete Group',
+          style: AppTextStyles.headingSmall,
         ),
-        title: Text('Delete Group', style: AppTextStyles.headingSmall),
         content: Text(
-          'This will delete the group and all its expenses. This cannot be undone.',
+          'This will delete the group and all expenses. Cannot be undone.',
           style: AppTextStyles.bodySmall,
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: Text('Cancel', style: AppTextStyles.buttonSmall),
+            child: Text('Cancel',
+                style: AppTextStyles.buttonSmall),
           ),
           TextButton(
             onPressed: () {
@@ -462,52 +461,49 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
-/// Stacked member avatars — shows up to 3 then "+N more"
+// ── Member Avatar Stack ───────────────────────────────────────────
+
 class _MemberAvatarStack extends StatelessWidget {
   final List<GroupMember> members;
-  final BuildContext context;
-
-  const _MemberAvatarStack({
-    required this.members,
-    required this.context,
-  });
+  const _MemberAvatarStack({required this.members});
 
   @override
   Widget build(BuildContext context) {
-    final visible = members.take(3).toList();
-    final extra   = members.length - visible.length;
-    const colors  = [
+    const colors = [
       AppColors.kPrimary,
       AppColors.kInfo,
       AppColors.kWarning,
+      AppColors.kCatEntertain,
     ];
+
+    final visible = members.take(4).toList();
+    final extra   = members.length - visible.length;
 
     return Row(
       children: [
         SizedBox(
-          width: R.w(context, 20.0 * visible.length + 10),
+          width:  R.w(context, 20.0 * visible.length + 8),
           height: R.w(context, 28),
           child: Stack(
             children: visible.asMap().entries.map((e) {
-              final initials = e.value.name.isNotEmpty
-                  ? e.value.name.trim().split(' ')
-                      .map((w) => w[0]).take(1).join().toUpperCase()
-                  : '?';
+              final color    = colors[e.key % colors.length];
+              final initials = e.value.initials;
               return Positioned(
                 left: e.key * R.w(context, 20),
                 child: Container(
                   width:  R.w(context, 28),
                   height: R.w(context, 28),
                   decoration: BoxDecoration(
-                    color:  colors[e.key % colors.length].withValues(alpha: 0.15),
+                    color:  color.withValues(alpha: 0.15),
                     shape:  BoxShape.circle,
-                    border: Border.all(color: AppColors.kCard, width: 1.5),
+                    border: Border.all(
+                        color: AppColors.kCard, width: 1.5),
                   ),
                   child: Center(
                     child: Text(
                       initials,
                       style: AppTextStyles.labelSmall.copyWith(
-                        color:      colors[e.key % colors.length],
+                        color:      color,
                         fontSize:   9,
                         fontWeight: FontWeight.w700,
                       ),
@@ -520,10 +516,7 @@ class _MemberAvatarStack extends StatelessWidget {
         ),
         if (extra > 0) ...[
           Gap(R.w(context, 4)),
-          Text(
-            '+$extra more',
-            style: AppTextStyles.labelSmall,
-          ),
+          Text('+$extra', style: AppTextStyles.labelSmall),
         ],
         const Spacer(),
         Text(

@@ -1,4 +1,6 @@
 // MoneyBuddy
+import 'dart:math';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +47,6 @@ class AnalyticsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // ── Header ──────────────────────────────────
                   Padding(
                     padding: AppSpacing.horizontalScreen.copyWith(top: 20),
@@ -109,6 +110,19 @@ class AnalyticsScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
+                  // ── Category breakdown ────────────────────────
+                  Obx(() {
+                    if (controller.categoryBreakdown.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: AppSpacing.horizontalScreen,
+                      child: _CategoryCard(controller: controller),
+                    ).animate(delay: 160.ms).fadeIn(duration: 300.ms);
+                  }),
+
+                  Gap(R.h(context, 20)),
+
                   // ── Smart Insights ───────────────────────────
                   Obx(() {
                     if (controller.smartInsights.isEmpty) {
@@ -122,9 +136,7 @@ class AnalyticsScreen extends StatelessWidget {
 
                   Gap(R.h(context, 20)),
 
-                  // ── Spending Forecast card ────────────────────
-                  // Only shown when prediction is reliable
-                  // (3+ days of data, not insufficient confidence)
+                  // ── Spending Forecast ─────────────────────────
                   Obx(() {
                     if (!controller.shouldShowPrediction) {
                       return const SizedBox.shrink();
@@ -144,23 +156,27 @@ class AnalyticsScreen extends StatelessWidget {
   }
 
   Widget _buildShimmer(BuildContext context) {
-    return Padding(
-      padding: AppSpacing.screenPadding,
-      child: Column(
-        children: [
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 40)),
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 44)),
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 220)),
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 180)),
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 160)),
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 140)),
-        ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: AppSpacing.screenPadding,
+        child: Column(
+          children: [
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 40)),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 44)),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 220)),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 200)),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 180)),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 160)),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 140)),
+          ],
+        ),
       ),
     );
   }
@@ -175,12 +191,12 @@ class _ChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final data     = controller.currentGraphData;
+      final data = controller.currentGraphData;
       final tabIndex = controller.selectedTab.value;
 
       return Container(
         width: double.infinity,
-        height: R.h(context, 220),
+        height: R.h(context, 240),
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.kCard,
@@ -190,14 +206,25 @@ class _ChartCard extends StatelessWidget {
         ),
         child: data.isEmpty
             ? Center(
-                child: Text(
-                  'No data available',
-                  style: AppTextStyles.bodySmall,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.chart_bar,
+                      size: R.w(context, 32),
+                      color: AppColors.kTextHint,
+                    ),
+                    Gap(R.h(context, 8)),
+                    Text(
+                      'No data yet',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ],
                 ),
               )
-            : tabIndex == 1
-                ? _buildBarChart(data, context)
-                : _buildLineChart(data, context),
+            : tabIndex == 0
+                ? _buildLineChart(data, context) // Day = line
+                : _buildBarChart(data, context), // Week + Month = bar
       );
     });
   }
@@ -207,29 +234,119 @@ class _ChartCard extends StatelessWidget {
       return FlSpot(e.key.toDouble(), e.value.amount);
     }).toList();
 
+    final maxVal = data.isEmpty
+        ? 0.0
+        : data.map((d) => d.amount as double).reduce((a, b) => a > b ? a : b);
+    final maxY = maxVal <= 0 ? 500.0 : maxVal * 1.2;
+    final yInterval = _niceInterval(maxY);
+
     return LineChart(
       LineChartData(
+        minY: 0,
+        maxY: maxY,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => const FlLine(
+          horizontalInterval: yInterval,
+          getDrawingHorizontalLine: (_) => FlLine(
             color: AppColors.kDivider,
             strokeWidth: 1,
+            dashArray: [4, 4],
           ),
         ),
-        titlesData: const FlTitlesData(show: false),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          // Y axis — left
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 44,
+              interval: yInterval,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const SizedBox.shrink();
+                return Text(
+                  _compactAmount(value),
+                  style: AppTextStyles.labelSmall.copyWith(
+                    fontSize: 9,
+                    color: AppColors.kTextHint,
+                  ),
+                );
+              },
+            ),
+          ),
+          // X axis — bottom
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= data.length) {
+                  return const SizedBox.shrink();
+                }
+                final label = data[index].label as String;
+                // Day: show only 12 AM, 6 AM, 12 PM, 6 PM
+                final hour = int.tryParse(label.split(':').first) ?? -1;
+                if (hour != -1 && hour % 6 != 0) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    hour == 0
+                        ? '12A'
+                        : hour == 6
+                            ? '6A'
+                            : hour == 12
+                                ? '12P'
+                                : hour == 18
+                                    ? '6P'
+                                    : label,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      fontSize: 9,
+                      color: AppColors.kTextHint,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
         borderData: FlBorderData(show: false),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
+            curveSmoothness: 0.35,
             color: AppColors.kPrimary,
             barWidth: 2.5,
-            dotData: const FlDotData(show: false),
+            dotData: FlDotData(
+              show: true,
+              checkToShowDot: (spot, barData) {
+                // Only show dot on max value
+                final maxSpot = spots.reduce((a, b) => a.y > b.y ? a : b);
+                return spot.x == maxSpot.x && spot.y > 0;
+              },
+              getDotPainter: (spot, pct, bar, index) => FlDotCirclePainter(
+                radius: 4,
+                color: AppColors.kPrimary,
+                strokeWidth: 2,
+                strokeColor: Colors.white,
+              ),
+            ),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.kPrimary.withValues(
-                alpha: AppColors.kChartFillOpacity,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.kPrimary.withValues(alpha: 0.25),
+                  AppColors.kPrimary.withValues(alpha: 0.0),
+                ],
               ),
             ),
           ),
@@ -237,6 +354,7 @@ class _ChartCard extends StatelessWidget {
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipColor: (_) => AppColors.kPrimaryDeep,
+            tooltipRoundedRadius: 8,
             getTooltipItems: (spots) => spots.map((s) {
               return LineTooltipItem(
                 AppFormatters.formatCurrencyCompact(s.y),
@@ -250,28 +368,103 @@ class _ChartCard extends StatelessWidget {
   }
 
   Widget _buildBarChart(List<dynamic> data, BuildContext context) {
+    final maxY = data.isEmpty
+        ? 100.0
+        : data.map((d) => d.amount as double).reduce((a, b) => a > b ? a : b) *
+            1.2;
+    final yInterval = _niceInterval(maxY);
+
     return BarChart(
       BarChartData(
+        minY: 0,
+        maxY: maxY,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => const FlLine(
+          horizontalInterval: yInterval,
+          getDrawingHorizontalLine: (_) => FlLine(
             color: AppColors.kDivider,
             strokeWidth: 1,
+            dashArray: [4, 4],
           ),
         ),
-        titlesData: const FlTitlesData(show: false),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          // Y axis
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 44,
+              interval: yInterval,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const SizedBox.shrink();
+                return Text(
+                  _compactAmount(value),
+                  style: AppTextStyles.labelSmall.copyWith(
+                    fontSize: 9,
+                    color: AppColors.kTextHint,
+                  ),
+                );
+              },
+            ),
+          ),
+          // X axis
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= data.length) {
+                  return const SizedBox.shrink();
+                }
+                // Shorten "Week 1" → "W1"
+                final raw = data[index].label as String;
+                final label =
+                    raw.startsWith('Week ') ? 'W${raw.split(' ').last}' : raw;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    label,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      fontSize: 9,
+                      color: AppColors.kTextHint,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
         borderData: FlBorderData(show: false),
         barGroups: data.asMap().entries.map((e) {
+          final isMax = e.value.amount ==
+              data.map((d) => d.amount).reduce((a, b) => a > b ? a : b);
           return BarChartGroupData(
             x: e.key,
             barRods: [
               BarChartRodData(
-                toY: e.value.amount,
-                color: AppColors.kPrimary,
-                width: R.w(context, 16),
+                toY: e.value.amount <= 0 ? 2.0 : e.value.amount,
+                width: data.length <= 4 ? R.w(context, 32) : R.w(context, 20),
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(4),
+                  top: Radius.circular(6),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isMax
+                      ? [
+                          AppColors.kPrimary,
+                          AppColors.kPrimary.withValues(alpha: 0.6),
+                        ]
+                      : [
+                          AppColors.kPrimary.withValues(alpha: 0.7),
+                          AppColors.kPrimary.withValues(alpha: 0.3),
+                        ],
                 ),
               ),
             ],
@@ -280,6 +473,7 @@ class _ChartCard extends StatelessWidget {
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => AppColors.kPrimaryDeep,
+            tooltipRoundedRadius: 8,
             getTooltipItem: (group, _, rod, __) {
               return BarTooltipItem(
                 AppFormatters.formatCurrencyCompact(rod.toY),
@@ -290,6 +484,33 @@ class _ChartCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Compute a clean interval for Y axis from max value.
+  double _niceInterval(double maxY) {
+    if (maxY <= 0) return 100;
+    final rough = maxY / 4;
+    final magnitude =
+        (rough == 0) ? 1 : pow(10, (log(rough) / log(10)).floor()).toInt();
+    final normalized = rough / magnitude;
+    double nice;
+    if (normalized < 1.5) {
+      nice = 1;
+    } else if (normalized < 3) {
+      nice = 2;
+    } else if (normalized < 7) {
+      nice = 5;
+    } else {
+      nice = 10;
+    }
+    return (nice * magnitude).toDouble();
+  }
+
+  /// Format Y axis value compactly.
+  String _compactAmount(double value) {
+    if (value >= 100000) return '₹${(value / 100000).toStringAsFixed(0)}L';
+    if (value >= 1000) return '₹${(value / 1000).toStringAsFixed(0)}k';
+    return '₹${value.toStringAsFixed(0)}';
   }
 }
 
@@ -315,42 +536,210 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Transaction Summary', style: AppTextStyles.headingSmall),
+          Text('This Month', style: AppTextStyles.headingSmall),
           Gap(R.h(context, 16)),
           _SummaryRow(
-            label:      'Total Saving',
-            value:      AppFormatters.formatCurrency(controller.totalSaving),
+            icon: CupertinoIcons.arrow_down_circle_fill,
+            iconColor: AppColors.kIncome,
+            label: 'Total Income',
+            value: AppFormatters.formatCurrency(stats?.totalIncome ?? 0),
             valueColor: AppColors.kIncome,
           ),
           _SummaryRow(
-            label:      'Total Income',
-            value:      AppFormatters.formatCurrency(stats?.totalIncome ?? 0),
-            valueColor: AppColors.kIncome,
-          ),
-          _SummaryRow(
-            label:      'Total Expense',
-            value:      AppFormatters.formatCurrency(stats?.totalExpense ?? 0),
+            icon: CupertinoIcons.arrow_up_circle_fill,
+            iconColor: AppColors.kExpense,
+            label: 'Total Expense',
+            value: AppFormatters.formatCurrency(stats?.totalExpense ?? 0),
             valueColor: AppColors.kExpense,
           ),
           _SummaryRow(
-            label: 'Daily avg spend',
-            value: AppFormatters.formatCurrencyCompact(
-              stats?.averageDailyExpense ?? 0,
-            ),
+            icon: CupertinoIcons.briefcase_fill,
+            iconColor: AppColors.kPrimary,
+            label: 'Net Savings',
+            value: AppFormatters.formatCurrency(controller.totalSaving),
+            valueColor: controller.totalSaving >= 0
+                ? AppColors.kIncome
+                : AppColors.kExpense,
           ),
           _SummaryRow(
-            label: 'Weekly avg spend',
+            icon: CupertinoIcons.sun_max_fill,
+            iconColor: AppColors.kInfo,
+            label: 'Daily avg',
             value: AppFormatters.formatCurrencyCompact(
-              stats?.averageWeeklyExpense ?? 0,
-            ),
+                stats?.averageDailyExpense ?? 0),
           ),
           _SummaryRow(
-            label:  'Monthly projection',
-            value:  AppFormatters.formatCurrencyCompact(
-              stats?.averageMonthlyExpense ?? 0,
-            ),
+            icon: CupertinoIcons.calendar_today,
+            iconColor: AppColors.kWarning,
+            label: 'Weekly avg',
+            value: AppFormatters.formatCurrencyCompact(
+                stats?.averageWeeklyExpense ?? 0),
+          ),
+          _SummaryRow(
+            icon: CupertinoIcons.chart_bar_fill,
+            iconColor: AppColors.kCatEntertain,
+            label: 'Monthly projection',
+            value: AppFormatters.formatCurrencyCompact(
+                stats?.averageMonthlyExpense ?? 0),
             isLast: true,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Category Breakdown Card ───────────────────────────────────────
+
+class _CategoryCard extends StatelessWidget {
+  final AnalyticsController controller;
+  const _CategoryCard({required this.controller});
+
+  // Category colors for pie chart segments
+  static const _segmentColors = [
+    AppColors.kPrimary,
+    AppColors.kInfo,
+    AppColors.kWarning,
+    AppColors.kCatEntertain,
+    AppColors.kExpense,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = controller.topCategories;
+    final total = categories.fold(0.0, (acc, e) => acc + e.value);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.kCard,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.kBorder, width: 0.8),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Spending by Category', style: AppTextStyles.headingSmall),
+          Gap(R.h(context, 20)),
+
+          // ── Pie chart + legend ──────────────────────────────
+          Row(
+            children: [
+              // Pie chart
+              SizedBox(
+                width: R.w(context, 120),
+                height: R.w(context, 120),
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: R.w(context, 28),
+                    sections: categories.asMap().entries.map((e) {
+                      final color =
+                          _segmentColors[e.key % _segmentColors.length];
+                      final pct =
+                          total > 0 ? (e.value.value / total * 100) : 0.0;
+                      return PieChartSectionData(
+                        color: color,
+                        value: e.value.value,
+                        title: '${pct.toStringAsFixed(0)}%',
+                        radius: R.w(context, 30),
+                        titleStyle: AppTextStyles.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontSize: R.sp(context, 8),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+
+              Gap(R.w(context, 20)),
+
+              // Legend
+              Expanded(
+                child: Column(
+                  children: categories.asMap().entries.map((e) {
+                    final color = _segmentColors[e.key % _segmentColors.length];
+                    final pct = total > 0 ? (e.value.value / total * 100) : 0.0;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: R.h(context, 8)),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: R.w(context, 10),
+                            height: R.w(context, 10),
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Gap(R.w(context, 8)),
+                          Expanded(
+                            child: Text(
+                              e.value.key,
+                              style: AppTextStyles.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${pct.toStringAsFixed(0)}%',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+
+          Gap(R.h(context, 16)),
+          const Divider(height: 1, color: AppColors.kDivider),
+          Gap(R.h(context, 12)),
+
+          // ── Category rows ───────────────────────────────────
+          ...categories.asMap().entries.map((e) {
+            final color = _segmentColors[e.key % _segmentColors.length];
+            final pct = total > 0 ? (e.value.value / total) : 0.0;
+            return Padding(
+              padding: EdgeInsets.only(bottom: R.h(context, 10)),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        e.value.key,
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                      Text(
+                        AppFormatters.formatCurrencyCompact(e.value.value),
+                        style: AppTextStyles.moneySmall.copyWith(
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Gap(R.h(context, 4)),
+                  ClipRRect(
+                    borderRadius: AppRadius.pill,
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 4,
+                      backgroundColor: AppColors.kSurface,
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -402,25 +791,6 @@ class _InsightRow extends StatelessWidget {
   final SmartInsight insight;
   const _InsightRow({required this.insight});
 
-  IconData get _icon {
-    switch (insight.title) {
-      case String t when t.contains('up'):
-        return CupertinoIcons.arrow_up_circle;
-      case String t when t.contains('saving') || t.contains('less'):
-        return CupertinoIcons.arrow_down_circle;
-      case String t when t.contains('top'):
-        return CupertinoIcons.star;
-      case String t when t.contains('projection'):
-        return CupertinoIcons.calendar;
-      default:
-        return CupertinoIcons.chart_bar;
-    }
-  }
-
-  Color get _iconColor => insight.isWarning
-      ? AppColors.kWarning
-      : AppColors.kSuccess;
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -437,8 +807,9 @@ class _InsightRow extends StatelessWidget {
               borderRadius: AppRadius.tile,
             ),
             child: Icon(
-              _icon,
-              color: _iconColor,
+              insight.icon,
+              color:
+                  insight.isWarning ? AppColors.kWarning : AppColors.kSuccess,
               size: R.w(context, 16),
             ),
           ),
@@ -449,10 +820,7 @@ class _InsightRow extends StatelessWidget {
               children: [
                 Text(insight.title, style: AppTextStyles.labelLarge),
                 Gap(R.h(context, 2)),
-                Text(
-                  insight.description,
-                  style: AppTextStyles.bodySmall,
-                ),
+                Text(insight.description, style: AppTextStyles.bodySmall),
               ],
             ),
           ),
@@ -483,8 +851,6 @@ class _PredictionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          // ── Title row ───────────────────────────────────────
           Row(
             children: [
               const Icon(
@@ -500,36 +866,29 @@ class _PredictionCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              // Confidence badge
               _ConfidenceBadge(confidence: p.confidence),
             ],
           ),
-
           Gap(R.h(context, 4)),
-
-          // ── Subtitle — based on X days ───────────────────────
           Text(
             controller.predictionSubtitle,
             style: AppTextStyles.labelSmall.copyWith(
               color: Colors.white60,
             ),
           ),
-
           Gap(R.h(context, 16)),
-
-          // ── Prediction rows ──────────────────────────────────
           _PredictionRow(
-            icon:  CupertinoIcons.sun_max,
+            icon: CupertinoIcons.sun_max,
             label: 'Tomorrow',
             value: AppFormatters.formatCurrency(p.nextDaySum),
           ),
           _PredictionRow(
-            icon:  CupertinoIcons.calendar_today,
+            icon: CupertinoIcons.calendar_today,
             label: 'Next 7 days',
             value: AppFormatters.formatCurrency(p.nextWeekSum),
           ),
           _PredictionRow(
-            icon:  CupertinoIcons.calendar,
+            icon: CupertinoIcons.calendar,
             label: 'Next 30 days',
             value: AppFormatters.formatCurrency(p.nextMonthSum),
             isLast: true,
@@ -546,19 +905,27 @@ class _ConfidenceBadge extends StatelessWidget {
 
   Color get _color {
     switch (confidence) {
-      case PredictionConfidence.high:   return const Color(0xFF22C55E);
-      case PredictionConfidence.medium: return const Color(0xFFF59E0B);
-      case PredictionConfidence.low:    return const Color(0xFFFF6B35);
-      default:                          return Colors.white38;
+      case PredictionConfidence.high:
+        return const Color(0xFF22C55E);
+      case PredictionConfidence.medium:
+        return const Color(0xFFF59E0B);
+      case PredictionConfidence.low:
+        return const Color(0xFFFF6B35);
+      default:
+        return Colors.white38;
     }
   }
 
   String get _label {
     switch (confidence) {
-      case PredictionConfidence.high:   return 'High';
-      case PredictionConfidence.medium: return 'Medium';
-      case PredictionConfidence.low:    return 'Low';
-      default:                          return '';
+      case PredictionConfidence.high:
+        return 'High';
+      case PredictionConfidence.medium:
+        return 'Medium';
+      case PredictionConfidence.low:
+        return 'Low';
+      default:
+        return '';
     }
   }
 
@@ -580,18 +947,13 @@ class _ConfidenceBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: _color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: _color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 4),
           Text(
             _label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: Colors.white,
-              fontSize: 9,
-            ),
+            style: AppTextStyles.labelSmall
+                .copyWith(color: Colors.white, fontSize: 9),
           ),
         ],
       ),
@@ -599,15 +961,19 @@ class _ConfidenceBadge extends StatelessWidget {
   }
 }
 
-// ── Shared Row Widgets ────────────────────────────────────────────
+// ── Shared Widgets ────────────────────────────────────────────────
 
 class _SummaryRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
   final String label;
   final String value;
   final Color? valueColor;
   final bool isLast;
 
   const _SummaryRow({
+    required this.icon,
+    required this.iconColor,
     required this.label,
     required this.value,
     this.valueColor,
@@ -621,9 +987,12 @@ class _SummaryRow extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(vertical: R.h(context, 10)),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: AppTextStyles.bodyMedium),
+              Icon(icon, color: iconColor, size: R.w(context, 16)),
+              Gap(R.w(context, 10)),
+              Expanded(
+                child: Text(label, style: AppTextStyles.bodyMedium),
+              ),
               Text(
                 value,
                 style: AppTextStyles.moneyMedium.copyWith(
@@ -633,7 +1002,12 @@ class _SummaryRow extends StatelessWidget {
             ],
           ),
         ),
-        if (!isLast) const Divider(height: 1, color: AppColors.kDivider),
+        if (!isLast)
+          const Divider(
+            height: 1,
+            color: AppColors.kDivider,
+            indent: 26,
+          ),
       ],
     );
   }
@@ -723,9 +1097,7 @@ class _TabButton extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: isActive
-                ? AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.kPrimary,
-                  )
+                ? AppTextStyles.labelLarge.copyWith(color: AppColors.kPrimary)
                 : AppTextStyles.labelMedium,
           ),
         ),

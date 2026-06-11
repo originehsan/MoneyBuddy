@@ -7,7 +7,7 @@ import '../models/graph_model.dart';
 import '../models/prediction_model.dart';
 import '../services/analytics_service.dart';
 
-export '../services/analytics_service.dart' show SmartInsight;
+export '../services/analytics_service.dart' show SmartInsight, InsightIcon;
 
 /// Manages analytics screen state.
 class AnalyticsController extends GetxController {
@@ -72,22 +72,19 @@ class AnalyticsController extends GetxController {
   double get totalSaving =>
       (stats.value?.totalIncome ?? 0) - (stats.value?.totalExpense ?? 0);
 
-  /// True only when prediction has reliable data to show.
-  /// Hides card when null OR when confidence is insufficient.
   bool get shouldShowPrediction {
     final p = prediction.value;
     if (p == null) return false;
     return p.isReliable;
   }
 
-  /// Subtitle text shown below prediction card title.
   String get predictionSubtitle {
     final p = prediction.value;
     if (p == null) return '';
-    return 'Based on ${p.daysOfData} ${p.daysOfData == 1 ? "day" : "days"} of data';
+    return 'Based on ${p.daysOfData} '
+        '${p.daysOfData == 1 ? "day" : "days"} of data';
   }
 
-  /// Confidence label for badge.
   String get confidenceLabel {
     switch (prediction.value?.confidence) {
       case PredictionConfidence.high:   return 'High confidence';
@@ -95,6 +92,13 @@ class AnalyticsController extends GetxController {
       case PredictionConfidence.low:    return 'Early estimate';
       default:                          return '';
     }
+  }
+
+  /// Top 5 categories by spend for pie chart.
+  List<MapEntry<String, double>> get topCategories {
+    final entries = categoryBreakdown.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries.take(5).toList();
   }
 
   String formatAmount(double amount) =>

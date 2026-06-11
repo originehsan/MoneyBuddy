@@ -1,6 +1,7 @@
 // MoneyBuddy
-import 'package:flutter/material.dart';
 import 'package:animated_digit/animated_digit.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:moneybuddy/core/utils/responsive.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -10,8 +11,6 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/formatters.dart';
 
 /// Hero balance card shown at the top of the home screen.
-/// Displays total balance with an animated roll-up effect,
-/// plus income and expense summary rows.
 class BalanceCard extends StatelessWidget {
   final double balance;
   final double income;
@@ -26,6 +25,9 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final netFlow    = income - expense;
+    final isPositive = netFlow >= 0;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -37,14 +39,60 @@ class BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Total Balance',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.kTextOnDarkMuted,
-              )),
+
+          // ── Balance label + net flow badge ─────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Your Balance',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.kTextOnDarkMuted,
+                ),
+              ),
+              // Net cash flow badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: AppRadius.pill,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPositive
+                          ? CupertinoIcons.arrow_up_right
+                          : CupertinoIcons.arrow_down_right,
+                      color: isPositive
+                          ? AppColors.kPrimaryLight
+                          : const Color(0xFFFFCDD2),
+                      size: 10,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${isPositive ? '+' : ''}${AppFormatters.formatCurrencyCompact(netFlow)}',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: isPositive
+                            ? AppColors.kPrimaryLight
+                            : const Color(0xFFFFCDD2),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
           const SizedBox(height: 6),
+
+          // ── Animated balance amount ─────────────────────────
           LayoutBuilder(
             builder: (context, constraints) {
-              // Scale down font for small screens or large amounts
               final fontSize = R.sp(context, 32);
               return AnimatedDigitWidget(
                 value: balance,
@@ -57,24 +105,27 @@ class BalanceCard extends StatelessWidget {
               );
             },
           ),
+
           const SizedBox(height: AppSpacing.lg),
+
+          // ── Income + Expense row ────────────────────────────
           Row(
             children: [
               Expanded(
                 child: _StatItem(
-                  label: 'Income',
+                  label:  'Income',
                   amount: income,
-                  icon: Icons.arrow_downward_rounded,
-                  color: AppColors.kPrimaryLight,
+                  icon:   CupertinoIcons.arrow_down_circle_fill,
+                  color:  AppColors.kPrimaryLight,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _StatItem(
-                  label: 'Expense',
+                  label:  'Expense',
                   amount: expense,
-                  icon: Icons.arrow_upward_rounded,
-                  color: const Color(0xFFFFCDD2),
+                  icon:   CupertinoIcons.arrow_up_circle_fill,
+                  color:  const Color(0xFFFFCDD2),
                 ),
               ),
             ],
@@ -85,7 +136,6 @@ class BalanceCard extends StatelessWidget {
   }
 }
 
-/// Income or expense stat row inside the balance card.
 class _StatItem extends StatelessWidget {
   final String label;
   final double amount;
@@ -104,31 +154,30 @@ class _StatItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        vertical:   AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: AppRadius.tile,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 0.8,
+        ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 14),
-          ),
+          Icon(icon, color: color, size: 18),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.kTextOnDarkMuted,
-                    )),
+                Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.kTextOnDarkMuted,
+                  ),
+                ),
                 Text(
                   AppFormatters.formatCurrencyCompact(amount),
                   style: AppTextStyles.moneySmall.copyWith(

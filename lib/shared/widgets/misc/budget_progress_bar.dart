@@ -7,7 +7,6 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/utils/formatters.dart';
 
 /// Monthly budget progress bar shown on the home screen.
-/// Turns amber at 80% and red at 100% to warn the user.
 class BudgetProgressBar extends StatelessWidget {
   final double spent;
   final double budget;
@@ -20,7 +19,9 @@ class BudgetProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percent  = budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0.0;
+    final percent  = budget > 0
+        ? (spent / budget).clamp(0.0, 1.0)
+        : 0.0;
     final isWarn   = percent >= 0.8 && percent < 1.0;
     final isOver   = percent >= 1.0;
     final barColor = isOver
@@ -37,7 +38,8 @@ class BudgetProgressBar extends StatelessWidget {
           children: [
             Text('Monthly Budget', style: AppTextStyles.labelLarge),
             Text(
-              '${AppFormatters.formatCurrencyCompact(spent)} / ${AppFormatters.formatCurrencyCompact(budget)}',
+              '${AppFormatters.formatCurrencyCompact(spent)} / '
+              '${AppFormatters.formatCurrencyCompact(budget)}',
               style: AppTextStyles.bodySmall,
             ),
           ],
@@ -57,7 +59,8 @@ class BudgetProgressBar extends StatelessWidget {
           Text(
             isOver
                 ? 'Budget exceeded!'
-                : 'You have used ${(percent * 100).toStringAsFixed(0)}% of your budget',
+                : 'You have used '
+                  '${(percent * 100).toStringAsFixed(0)}% of your budget',
             style: AppTextStyles.labelSmall.copyWith(color: barColor),
           ),
         ],

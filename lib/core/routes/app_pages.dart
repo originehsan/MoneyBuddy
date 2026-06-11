@@ -1,5 +1,11 @@
 // MoneyBuddy
 import 'package:get/get.dart';
+import 'package:moneybuddy/features/budget/bindings/budget_binding.dart';
+import 'package:moneybuddy/features/budget/screen/budget_screen.dart';
+import 'package:moneybuddy/features/emi/bindings/emi_binding.dart';
+import 'package:moneybuddy/features/emi/screens/emi_screen.dart';
+import 'package:moneybuddy/features/goal/bindings/goals_binding.dart';
+import 'package:moneybuddy/features/goal/screens/goals_screen.dart';
 import '../../features/auth/bindings/auth_binding.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
@@ -28,11 +34,39 @@ import 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const _push  = Duration(milliseconds: 280);
-  static const _fade  = Duration(milliseconds: 300);
+  static const _push = Duration(milliseconds: 280);
+  static const _fade = Duration(milliseconds: 300);
   static const _modal = Duration(milliseconds: 300);
 
   static final List<GetPage> pages = [
+    // ADD after addBalance route:
+
+// ── Budget ────────────────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.budget,
+      page: () => const BudgetScreen(),
+      binding: BudgetBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: _push,
+    ),
+
+// ── Goals ─────────────────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.goals,
+      page: () => const GoalsScreen(),
+      binding: GoalsBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: _push,
+    ),
+
+// ── EMI ───────────────────────────────────────────────────────
+    GetPage(
+      name: AppRoutes.emi,
+      page: () => const EmiScreen(),
+      binding: EmiBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: _push,
+    ),
 
     // ── Splash ──────────────────────────────────────────────────
     GetPage(
@@ -95,6 +129,8 @@ class AppPages {
     ),
 
     // ── Main shell ───────────────────────────────────────────────
+    // MainBinding registers HomeController, TransactionController,
+    // AnalyticsController, GroupController — all bottom nav screens
     GetPage(
       name: AppRoutes.main,
       page: () => const MainScreen(),
@@ -103,7 +139,7 @@ class AppPages {
       transitionDuration: const Duration(milliseconds: 350),
     ),
 
-    // ── Transactions ─────────────────────────────────────────────
+    // ── Transactions (standalone — from home "see all") ──────────
     GetPage(
       name: AppRoutes.transactions,
       page: () => const TransactionScreen(),

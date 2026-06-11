@@ -1,5 +1,6 @@
 // MoneyBuddy
 import 'package:board_datetime_picker/board_datetime_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
@@ -9,6 +10,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/buttons/primary_button.dart';
 import '../../../shared/widgets/inputs/app_text_field.dart';
 import '../../../shared/widgets/misc/category_chip.dart';
@@ -36,15 +38,11 @@ class AddTransactionScreen extends StatelessWidget {
       backgroundColor: AppColors.kBackground,
       body: Column(
         children: [
-          // ── Top section — emerald header ───────────────────────
+          // ── Header ────────────────────────────────────────────
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF059669), Color(0xFF047857)],
-              ),
+              gradient: AppColors.kBalanceGradient,
               borderRadius: BorderRadius.only(
                 bottomLeft:  Radius.circular(AppRadius.xxl),
                 bottomRight: Radius.circular(AppRadius.xxl),
@@ -61,7 +59,7 @@ class AddTransactionScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    // ── Header row ─────────────────────────────
+                    // ── Top row ────────────────────────────────
                     Row(
                       children: [
                         GestureDetector(
@@ -70,21 +68,19 @@ class AddTransactionScreen extends StatelessWidget {
                             Get.back();
                           },
                           child: Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: EdgeInsets.all(R.w(context, 8)),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: AppRadius.tile,
                             ),
-                            child: const Icon(
-                              Icons.close_rounded,
+                            child: Icon(
+                              CupertinoIcons.xmark,
                               color: Colors.white,
-                              size: 20,
+                              size: R.w(context, 20),
                             ),
                           ),
                         ),
                         const Spacer(),
-
-                        // Title changes based on edit mode
                         Obx(() => Text(
                               controller.isEditMode.value
                                   ? 'Edit Transaction'
@@ -93,13 +89,12 @@ class AddTransactionScreen extends StatelessWidget {
                                 color: Colors.white,
                               ),
                             )),
-
                         const Spacer(),
                         const SizedBox(width: 36),
                       ],
                     ),
 
-                    const Gap(20),
+                    Gap(R.h(context, 20)),
 
                     // ── Income / Expense toggle ─────────────────
                     Obx(() => Container(
@@ -112,12 +107,13 @@ class AddTransactionScreen extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _ToggleTab(
-                                label: 'Expense',
+                                label:    'Expense',
                                 isActive: controller.isExpense.value,
-                                onTap: () => controller.isExpense.value = true,
+                                onTap: () =>
+                                    controller.isExpense.value = true,
                               ),
                               _ToggleTab(
-                                label: 'Income',
+                                label:    'Income',
                                 isActive: !controller.isExpense.value,
                                 onTap: () =>
                                     controller.isExpense.value = false,
@@ -126,45 +122,106 @@ class AddTransactionScreen extends StatelessWidget {
                           ),
                         )),
 
-                    const Gap(16),
+                    Gap(R.h(context, 16)),
 
-                    // ── Amount field ───────────────────────────
+                    // ── Amount + Mic row ───────────────────────
                     Text(
                       'How much?',
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: Colors.white70,
                       ),
                     ),
-                    const Gap(4),
-                    TextField(
-                      controller: controller.amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      style: AppTextStyles.displayLarge,
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        hintText: '₹0',
-                        hintStyle: AppTextStyles.displayLarge.copyWith(
-                          color: Colors.white38,
+                    Gap(R.h(context, 4)),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller.amountController,
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true),
+                            style: AppTextStyles.displayLarge,
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              hintText: '₹0',
+                              hintStyle:
+                                  AppTextStyles.displayLarge.copyWith(
+                                color: Colors.white38,
+                              ),
+                              border: InputBorder.none,
+                              filled: false,
+                            ),
+                            cursorColor: Colors.white,
+                          ),
                         ),
-                        border: InputBorder.none,
-                        filled: false,
-                      ),
-                      cursorColor: Colors.white,
+
+                        // ── Mic button ─────────────────────────
+                        Obx(() => GestureDetector(
+                              onTap: controller.toggleVoiceInput,
+                              child: AnimatedContainer(
+                                duration:
+                                    const Duration(milliseconds: 200),
+                                padding: EdgeInsets.all(R.w(context, 10)),
+                                decoration: BoxDecoration(
+                                  color: controller.isListening.value
+                                      ? Colors.red.withValues(alpha: 0.8)
+                                      : Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  controller.isListening.value
+                                      ? CupertinoIcons.stop_fill
+                                      : CupertinoIcons.mic,
+                                  color: Colors.white,
+                                  size: R.w(context, 20),
+                                ),
+                              ),
+                            )),
+                      ],
                     ),
 
-                    // Calculator result
-                    Obx(() => controller.calculatorResult.value.isNotEmpty
-                        ? Text(
-                            controller.calculatorResult.value,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.white70,
+                    // Voice listening indicator
+                    Obx(() {
+                      if (!controller.isListening.value &&
+                          controller.voiceText.value.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        children: [
+                          if (controller.isListening.value)
+                            Text(
+                              'Listening...',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.white70,
+                              ),
                             ),
-                          )
-                        : const SizedBox.shrink()),
+                          if (controller.voiceText.value.isNotEmpty)
+                            Text(
+                              '"${controller.voiceText.value}"',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.white60,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      );
+                    }),
 
-                    const Gap(8),
+                    // Calculator result
+                    Obx(() =>
+                        controller.calculatorResult.value.isNotEmpty
+                            ? Text(
+                                controller.calculatorResult.value,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: Colors.white70,
+                                ),
+                              )
+                            : const SizedBox.shrink()),
+
+                    Gap(R.h(context, 8)),
                   ],
                 ),
               ),
@@ -183,10 +240,11 @@ class AddTransactionScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
                   // Description
                   AppTextField(
-                    label: AppStrings.description,
-                    hint: 'What was this for?',
+                    label:      AppStrings.description,
+                    hint:       'What was this for?',
                     controller: controller.descController,
                   )
                       .animate()
@@ -195,7 +253,7 @@ class AddTransactionScreen extends StatelessWidget {
 
                   const Gap(20),
 
-                  // Category chips
+                  // Category
                   Text('Category', style: AppTextStyles.inputLabel),
                   const Gap(10),
                   Obx(() {
@@ -207,8 +265,8 @@ class AddTransactionScreen extends StatelessWidget {
                       runSpacing: 8,
                       children: cats.map((cat) => CategoryChip(
                             category: cat,
-                            selected:
-                                controller.selectedCategory.value == cat,
+                            selected: controller.selectedCategory.value
+                                == cat,
                             onTap: () =>
                                 controller.selectedCategory.value = cat,
                           )).toList(),
@@ -225,7 +283,7 @@ class AddTransactionScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
+                            vertical:   AppSpacing.md,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.kInputFill,
@@ -234,14 +292,15 @@ class AddTransactionScreen extends StatelessWidget {
                           ),
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.calendar_today_rounded,
+                              Icon(
+                                CupertinoIcons.calendar,
                                 color: AppColors.kTextHint,
                                 size: 18,
                               ),
                               const Gap(8),
                               Text(
-                                _formatDate(controller.selectedDate.value),
+                                _formatDate(
+                                    controller.selectedDate.value),
                                 style: AppTextStyles.inputValue,
                               ),
                             ],
@@ -251,7 +310,7 @@ class AddTransactionScreen extends StatelessWidget {
 
                   const Gap(28),
 
-                  // Submit button — label changes in edit mode
+                  // Submit button
                   Obx(() => PrimaryButton(
                         text: controller.isEditMode.value
                             ? 'Update Transaction'
@@ -281,9 +340,9 @@ class AddTransactionScreen extends StatelessWidget {
       initialDate: controller.selectedDate.value,
       options: const BoardDateTimeOptions(
         languages: BoardPickerLanguages(
-          today: 'Today',
+          today:    'Today',
           tomorrow: 'Tomorrow',
-          now: 'Now',
+          now:      'Now',
         ),
       ),
     );
@@ -301,7 +360,7 @@ class AddTransactionScreen extends StatelessWidget {
   }
 
   String _timeString(DateTime date) {
-    final hour   = date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour;
+    final hour   = date.hour % 12 == 0 ? 12 : date.hour % 12;
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $period';

@@ -1,5 +1,6 @@
 // MoneyBuddy
-/// Maps the /homepage/home API response to typed Dart fields.
+
+/// Home stats computed from Firestore transactions.
 class HomeStatsModel {
   final double totalIncome;
   final double totalExpense;
@@ -7,6 +8,7 @@ class HomeStatsModel {
   final double averageDailyExpense;
   final double averageWeeklyExpense;
   final double averageMonthlyExpense;
+  final double todaySpend;
 
   const HomeStatsModel({
     required this.totalIncome,
@@ -15,23 +17,9 @@ class HomeStatsModel {
     required this.averageDailyExpense,
     required this.averageWeeklyExpense,
     required this.averageMonthlyExpense,
+    this.todaySpend = 0.0,
   });
 
-  factory HomeStatsModel.fromJson(Map<String, dynamic> json) {
-    return HomeStatsModel(
-      totalIncome:           _toDouble(json['totalIncome']),
-      totalExpense:          _toDouble(json['totalExpense']),
-      remainingBalance:      _toDouble(json['remainingBalance']),
-      averageDailyExpense:   _toDouble(json['averageDailyExpense']),
-      averageWeeklyExpense:  _toDouble(json['averageWeeklyExpense']),
-      averageMonthlyExpense: _toDouble(json['averageMonthlyExpense']),
-    );
-  }
-
-  static double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0.0;
-  }
+  double get netCashFlow => totalIncome - totalExpense;
+  bool get isPositive    => netCashFlow >= 0;
 }

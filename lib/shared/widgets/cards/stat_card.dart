@@ -1,4 +1,5 @@
 // MoneyBuddy
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -6,7 +7,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/responsive.dart';
 
-/// Small stat card for dashboard metrics like daily/weekly/monthly averages.
+/// Small stat card for dashboard metrics.
 class StatCard extends StatelessWidget {
   final String label;
   final String value;

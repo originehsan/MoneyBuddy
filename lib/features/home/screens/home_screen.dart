@@ -1,4 +1,5 @@
 // MoneyBuddy
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
@@ -7,6 +8,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/cards/balance_card.dart';
@@ -47,8 +50,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  // ── Greeting header ─────────────────────────
+                  // ── Greeting header ──────────────────────────
                   Padding(
                     padding: AppSpacing.horizontalScreen.copyWith(top: 20),
                     child: Row(
@@ -67,7 +69,10 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        _Avatar(name: controller.userName.value),
+                        GestureDetector(
+                          onTap: () => Get.toNamed(AppRoutes.profile),
+                          child: _Avatar(name: controller.userName.value),
+                        ),
                       ],
                     ),
                   )
@@ -82,15 +87,30 @@ class HomeScreen extends StatelessWidget {
                     padding: AppSpacing.horizontalScreen,
                     child: BalanceCard(
                       balance: controller.stats.value?.remainingBalance ?? 0,
-                      income:  controller.stats.value?.totalIncome      ?? 0,
-                      expense: controller.stats.value?.totalExpense      ?? 0,
+                      income: controller.stats.value?.totalIncome ?? 0,
+                      expense: controller.stats.value?.totalExpense ?? 0,
                     ),
                   )
                       .animate(delay: 100.ms)
                       .fadeIn(duration: 300.ms)
                       .slideY(begin: 0.1, end: 0),
 
-                  Gap(R.h(context, 20)),
+                  Gap(R.h(context, 16)),
+
+                  // ── Today's spend card ───────────────────────
+                  Obx(() {
+                    final today = controller.stats.value?.todaySpend ?? 0;
+                    if (today <= 0) return const SizedBox.shrink();
+                    return Padding(
+                      padding: AppSpacing.horizontalScreen,
+                      child: _TodaySpendCard(
+                        spent: today,
+                        budget: controller.monthlyBudget.value,
+                      ),
+                    ).animate(delay: 120.ms).fadeIn(duration: 300.ms);
+                  }),
+
+                  Gap(R.h(context, 16)),
 
                   // ── Stat cards ───────────────────────────────
                   SizedBox(
@@ -106,7 +126,7 @@ class HomeScreen extends StatelessWidget {
                             value: AppFormatters.formatCurrencyCompact(
                               controller.stats.value?.averageDailyExpense ?? 0,
                             ),
-                            icon: Icons.today_rounded,
+                            icon: CupertinoIcons.sun_max,
                           ),
                         ),
                         Gap(R.w(context, 12)),
@@ -117,7 +137,7 @@ class HomeScreen extends StatelessWidget {
                             value: AppFormatters.formatCurrencyCompact(
                               controller.stats.value?.averageWeeklyExpense ?? 0,
                             ),
-                            icon: Icons.date_range_rounded,
+                            icon: CupertinoIcons.calendar_today,
                             iconColor: AppColors.kInfo,
                             iconBgColor: AppColors.kInfoBg,
                           ),
@@ -126,11 +146,12 @@ class HomeScreen extends StatelessWidget {
                         SizedBox(
                           width: R.w(context, 140),
                           child: StatCard(
-                            label: 'Monthly avg',
+                            label: 'Projected',
                             value: AppFormatters.formatCurrencyCompact(
-                              controller.stats.value?.averageMonthlyExpense ?? 0,
+                              controller.stats.value?.averageMonthlyExpense ??
+                                  0,
                             ),
-                            icon: Icons.calendar_month_rounded,
+                            icon: CupertinoIcons.chart_bar,
                             iconColor: AppColors.kWarning,
                             iconBgColor: AppColors.kWarningBg,
                           ),
@@ -144,11 +165,14 @@ class HomeScreen extends StatelessWidget {
                     if (controller.monthlyBudget.value <= 0) {
                       return const SizedBox.shrink();
                     }
-                    return Padding(
-                      padding: AppSpacing.horizontalScreen.copyWith(top: 20),
-                      child: BudgetProgressBar(
-                        spent:  controller.stats.value?.totalExpense ?? 0,
-                        budget: controller.monthlyBudget.value,
+                    return GestureDetector(
+                      onTap: () => Get.toNamed(AppRoutes.budget),
+                      child: Padding(
+                        padding: AppSpacing.horizontalScreen.copyWith(top: 16),
+                        child: BudgetProgressBar(
+                          spent: controller.stats.value?.totalExpense ?? 0,
+                          budget: controller.monthlyBudget.value,
+                        ),
                       ),
                     );
                   }),
@@ -159,8 +183,8 @@ class HomeScreen extends StatelessWidget {
                   Padding(
                     padding: AppSpacing.horizontalScreen,
                     child: SectionHeader(
-                      title:       AppStrings.recentTx,
-                      actionText:  AppStrings.seeAll,
+                      title: AppStrings.recentTx,
+                      actionText: AppStrings.seeAll,
                       actionRoute: AppRoutes.transactions,
                     ),
                   ),
@@ -168,32 +192,47 @@ class HomeScreen extends StatelessWidget {
                   Gap(R.h(context, 12)),
 
                   controller.recentTx.isEmpty
-                      ? const EmptyState(
-                          icon:     Icons.receipt_long_rounded,
-                          title:    AppStrings.noTransactions,
+                      ? EmptyState(
+                          icon: CupertinoIcons.doc_text,
+                          title: AppStrings.noTransactions,
                           subtitle: AppStrings.noTxDesc,
                         )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: controller.recentTx.length,
-                          separatorBuilder: (_, __) => const Divider(
-                            height: 1,
-                            color: AppColors.kDivider,
+                      : Container(
+                          margin: AppSpacing.horizontalScreen,
+                          decoration: BoxDecoration(
+                            color: AppColors.kCard,
+                            borderRadius: AppRadius.card,
+                            border: Border.all(
+                              color: AppColors.kBorder,
+                              width: 0.8,
+                            ),
+                            boxShadow: AppShadows.card,
                           ),
-                          itemBuilder: (_, i) {
-                            final tx = controller.recentTx[i];
-                            return TransactionTile(
-                              title:    tx.description,
-                              amount:   tx.amount,
-                              type:     tx.type,
-                              category: tx.category ?? tx.type,
-                              date:     tx.date,
-                            )
-                                .animate(delay: (i * 50).ms)
-                                .fadeIn(duration: 250.ms)
-                                .slideX(begin: 0.05, end: 0);
-                          },
+                          child: ClipRRect(
+                            borderRadius: AppRadius.card,
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: controller.recentTx.length,
+                              separatorBuilder: (_, __) => const Divider(
+                                height: 1,
+                                color: AppColors.kDivider,
+                              ),
+                              itemBuilder: (_, i) {
+                                final tx = controller.recentTx[i];
+                                return TransactionTile(
+                                  title: tx.description,
+                                  amount: tx.amount,
+                                  type: tx.type,
+                                  category: tx.category ?? tx.type,
+                                  date: tx.date,
+                                )
+                                    .animate(delay: (i * 50).ms)
+                                    .fadeIn(duration: 250.ms)
+                                    .slideX(begin: 0.05, end: 0);
+                              },
+                            ),
+                          ),
                         ),
                 ],
               ),
@@ -205,43 +244,159 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildShimmer(BuildContext context) {
-    return Padding(
-      padding: AppSpacing.screenPadding,
-      child: Column(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: AppSpacing.screenPadding,
+        child: Column(
+          children: [
+            Gap(R.h(context, 20)),
+            Row(
+              children: [
+                ShimmerWidget(
+                    width: R.w(context, 120), height: R.h(context, 40)),
+                const Spacer(),
+                ShimmerWidget(
+                    width: R.w(context, 44),
+                    height: R.w(context, 44),
+                    radius: 22),
+              ],
+            ),
+            Gap(R.h(context, 20)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 160)),
+            Gap(R.h(context, 16)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 60)),
+            Gap(R.h(context, 16)),
+            Row(
+              children: [
+                Expanded(
+                  child: ShimmerWidget(
+                      width: double.infinity, height: R.h(context, 110)),
+                ),
+                Gap(R.w(context, 12)),
+                Expanded(
+                  child: ShimmerWidget(
+                      width: double.infinity, height: R.h(context, 110)),
+                ),
+                Gap(R.w(context, 12)),
+                Expanded(
+                  child: ShimmerWidget(
+                      width: double.infinity, height: R.h(context, 110)),
+                ),
+              ],
+            ),
+            Gap(R.h(context, 24)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 68)),
+            Gap(R.h(context, 8)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 68)),
+            Gap(R.h(context, 8)),
+            ShimmerWidget(width: double.infinity, height: R.h(context, 68)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Today's Spend Card ─────────────────────────────────────────────
+
+class _TodaySpendCard extends StatelessWidget {
+  final double spent;
+  final double budget;
+
+  const _TodaySpendCard({required this.spent, required this.budget});
+
+  @override
+  Widget build(BuildContext context) {
+    final dailyBudget = budget > 0 ? budget / 30 : 0.0;
+    final isOverDaily = dailyBudget > 0 && spent > dailyBudget;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: R.w(context, 16),
+        vertical: R.h(context, 12),
+      ),
+      decoration: BoxDecoration(
+        color: isOverDaily ? AppColors.kErrorBg : AppColors.kPrimaryTint,
+        borderRadius: AppRadius.card,
+        border: Border.all(
+          color: isOverDaily
+              ? AppColors.kError.withValues(alpha: 0.3)
+              : AppColors.kPrimary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
         children: [
-          Gap(R.h(context, 20)),
-          Row(
-            children: [
-              ShimmerWidget(width: R.w(context, 120), height: R.h(context, 40)),
-              const Spacer(),
-              ShimmerWidget(width: R.w(context, 44), height: R.w(context, 44), radius: 22),
-            ],
+          // Icon
+          Container(
+            padding: EdgeInsets.all(R.w(context, 8)),
+            decoration: BoxDecoration(
+              color: isOverDaily
+                  ? AppColors.kError.withValues(alpha: 0.1)
+                  : AppColors.kPrimary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isOverDaily
+                  ? CupertinoIcons.exclamationmark_circle
+                  : CupertinoIcons.sun_max,
+              color: isOverDaily ? AppColors.kError : AppColors.kPrimary,
+              size: R.w(context, 18),
+            ),
           ),
-          Gap(R.h(context, 20)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 160)),
-          Gap(R.h(context, 20)),
-          Row(
-            children: [
-              Expanded(child: ShimmerWidget(width: double.infinity, height: R.h(context, 110))),
-              Gap(R.w(context, 12)),
-              Expanded(child: ShimmerWidget(width: double.infinity, height: R.h(context, 110))),
-              Gap(R.w(context, 12)),
-              Expanded(child: ShimmerWidget(width: double.infinity, height: R.h(context, 110))),
-            ],
+
+          Gap(R.w(context, 12)),
+
+          // Label + amount
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Today\'s spend',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: isOverDaily
+                        ? AppColors.kExpenseText
+                        : AppColors.kPrimaryMid,
+                  ),
+                ),
+                Text(
+                  AppFormatters.formatCurrency(spent),
+                  style: AppTextStyles.moneyMedium.copyWith(
+                    color: isOverDaily ? AppColors.kError : AppColors.kPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          Gap(R.h(context, 24)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 68)),
-          Gap(R.h(context, 8)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 68)),
-          Gap(R.h(context, 8)),
-          ShimmerWidget(width: double.infinity, height: R.h(context, 68)),
+
+          // Budget remaining
+          if (dailyBudget > 0)
+            Flexible(
+              child: Text(
+                isOverDaily
+                    ? 'Over limit'
+                    : '${AppFormatters.formatCurrencyCompact(dailyBudget - spent)} left',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color:
+                      isOverDaily ? AppColors.kError : AppColors.kTextSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-/// Initials avatar shown next to greeting.
+// ── Avatar ─────────────────────────────────────────────────────────
+
 class _Avatar extends StatelessWidget {
   final String name;
   const _Avatar({required this.name});
@@ -253,18 +408,18 @@ class _Avatar extends StatelessWidget {
         : 'MB';
 
     return Container(
-      width:  R.w(context, 44),
+      width: R.w(context, 44),
       height: R.w(context, 44),
       decoration: BoxDecoration(
-        color:  AppColors.kPrimaryLight,
-        shape:  BoxShape.circle,
+        color: AppColors.kPrimaryLight,
+        shape: BoxShape.circle,
         border: Border.all(color: AppColors.kPrimary, width: 1.5),
       ),
       child: Center(
         child: Text(
           initials,
           style: AppTextStyles.labelLarge.copyWith(
-            color:      AppColors.kPrimary,
+            color: AppColors.kPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),

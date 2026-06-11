@@ -8,8 +8,7 @@ import '../../budget/budget_service.dart';
 import '../models/home_stats_model.dart';
 import '../services/home_service.dart';
 
-/// Manages all home screen state — stats, greeting, recent transactions,
-/// and monthly budget tracking.
+/// Manages all home screen state.
 class HomeController extends GetxController {
   final _homeService        = HomeService();
   final _transactionService = TransactionService();
@@ -44,7 +43,6 @@ class HomeController extends GetxController {
       final homeData = results[1] as HomeStatsModel?;
       final txList   = results[2] as List<TransactionModel>;
 
-      // Fallback to Firebase Auth display name
       userName.value = name ??
           FirebaseAuth.instance.currentUser?.displayName ??
           'there';
@@ -63,7 +61,7 @@ class HomeController extends GetxController {
     monthlyBudget.value = budget;
   }
 
-  void setBudget(double amount) => monthlyBudget.value = amount;
+  void refreshBudget() => _loadBudget();
 
   double get budgetProgress {
     if (monthlyBudget.value <= 0) return 0;
