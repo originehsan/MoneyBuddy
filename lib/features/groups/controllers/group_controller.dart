@@ -1,5 +1,5 @@
 // MoneyBuddy
- import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:moneybuddy/core/routes/app_routes.dart';
@@ -11,16 +11,16 @@ class GroupController extends GetxController {
   final _service = GroupService();
 
   // ── List state ────────────────────────────────────────────────
-  final isLoading    = true.obs;
-  final groups       = <GroupModel>[].obs;
+  final isLoading = true.obs;
+  final groups = <GroupModel>[].obs;
   final errorMessage = ''.obs;
 
   // ── Group form ────────────────────────────────────────────────
   final titleController = TextEditingController();
-  final descController  = TextEditingController();
-  final isSubmitting    = false.obs;
-  final isEditMode      = false.obs;
-  final editingGroupId  = ''.obs;
+  final descController = TextEditingController();
+  final isSubmitting = false.obs;
+  final isEditMode = false.obs;
+  final editingGroupId = ''.obs;
 
   final memberNameControllers = <TextEditingController>[
     TextEditingController(),
@@ -28,19 +28,18 @@ class GroupController extends GetxController {
 
   // ── Expense form ──────────────────────────────────────────────
   final expenseAmountController = TextEditingController();
-  final expenseDescController   = TextEditingController();
-  final selectedDate            = DateTime.now().obs;
-  final selectedGroupId         = ''.obs;
-  final isExpenseSubmitting     = false.obs;
-  final isExpenseEditMode       = false.obs;
-  final editingExpenseId        = ''.obs;
+  final expenseDescController = TextEditingController();
+  final selectedDate = DateTime.now().obs;
+  final selectedGroupId = ''.obs;
+  final isExpenseSubmitting = false.obs;
+  final isExpenseEditMode = false.obs;
+  final editingExpenseId = ''.obs;
 
-  final selectedPaidBy    = Rxn<GroupMember>();
+  final selectedPaidBy = Rxn<GroupMember>();
   final selectedSplitWith = <GroupMember>[].obs;
 
   // ── Current user info ─────────────────────────────────────────
-  String get _currentEmail =>
-      FirebaseAuth.instance.currentUser?.email ?? '';
+  String get _currentEmail => FirebaseAuth.instance.currentUser?.email ?? '';
   String get _currentName =>
       FirebaseAuth.instance.currentUser?.displayName ?? 'You';
 
@@ -53,7 +52,7 @@ class GroupController extends GetxController {
   // ── Load ──────────────────────────────────────────────────────
 
   Future<void> loadGroups() async {
-    isLoading.value    = true;
+    isLoading.value = true;
     errorMessage.value = '';
     try {
       groups.value = await _service.getGroups();
@@ -82,26 +81,27 @@ class GroupController extends GetxController {
   // ── Create / Update group ─────────────────────────────────────
 
   Future<void> submitGroup() async {
-    final title       = titleController.text.trim();
+    final title = titleController.text.trim();
     final description = descController.text.trim();
-    final names       = memberNameControllers
+    final names = memberNameControllers
         .map((c) => c.text.trim())
         .where((n) => n.isNotEmpty)
         .toList();
 
     if (title.isEmpty) {
-      _showError('Enter a group name'); return;
+      _showError('Enter a group name');
+      return;
     }
     if (description.isEmpty) {
-      _showError('Enter a description'); return;
+      _showError('Enter a description');
+      return;
     }
     if (names.isEmpty) {
-      _showError('Add at least one member'); return;
+      _showError('Add at least one member');
+      return;
     }
 
-    final members = names
-        .map((n) => GroupMember(name: n, email: ''))
-        .toList();
+    final members = names.map((n) => GroupMember(name: n, email: '')).toList();
 
     isSubmitting.value = true;
     try {
@@ -117,17 +117,17 @@ class GroupController extends GetxController {
             : GroupMember(name: _currentName, email: _currentEmail);
 
         success = await _service.updateGroup(
-          groupId:     editingGroupId.value,
-          title:       title,
+          groupId: editingGroupId.value,
+          title: title,
           description: description,
-          members:     [creator, ...members],
+          members: [creator, ...members],
         );
         if (success) _showSuccess('Group updated');
       } else {
         success = await _service.createGroup(
-          title:       title,
+          title: title,
           description: description,
-          members:     members,
+          members: members,
           creatorName: _currentName,
         );
         if (success) _showSuccess('Group created');
@@ -138,14 +138,13 @@ class GroupController extends GetxController {
         _resetGroupForm();
 
         if (!wasEdit) {
-          Get.until(
-              (route) => route.settings.name == AppRoutes.main);
+          Get.until((route) => route.settings.name == AppRoutes.main);
           if (groups.isNotEmpty) {
             final newGroup = groups.first;
             Get.toNamed(
               AppRoutes.groupDetail,
               arguments: {
-                'groupId':    newGroup.id,
+                'groupId': newGroup.id,
                 'groupTitle': newGroup.title,
               },
             );
@@ -154,9 +153,8 @@ class GroupController extends GetxController {
           Get.back();
         }
       } else {
-        _showError(wasEdit
-            ? 'Failed to update group'
-            : 'Failed to create group');
+        _showError(
+            wasEdit ? 'Failed to update group' : 'Failed to create group');
       }
     } catch (e) {
       _showError(e.toString());
@@ -184,19 +182,20 @@ class GroupController extends GetxController {
   // ── Start edit group ──────────────────────────────────────────
 
   void startEditGroup(GroupModel group) {
-    isEditMode.value     = true;
+    isEditMode.value = true;
     editingGroupId.value = group.id;
     titleController.text = group.title;
-    descController.text  = group.description;
+    descController.text = group.description;
 
-    for (final c in memberNameControllers) { c.dispose(); }
+    for (final c in memberNameControllers) {
+      c.dispose();
+    }
     final others = group.members.skip(1).toList();
     if (others.isEmpty) {
       memberNameControllers.assignAll([TextEditingController()]);
     } else {
       memberNameControllers.assignAll(
-        others.map((m) =>
-            TextEditingController(text: m.displayName)).toList(),
+        others.map((m) => TextEditingController(text: m.displayName)).toList(),
       );
     }
   }
@@ -204,35 +203,42 @@ class GroupController extends GetxController {
   // ── Expense defaults ──────────────────────────────────────────
 
   void initExpenseDefaults(GroupModel group) {
-    final currentMember = group.members.firstWhereOrNull(
-          (m) => m.email == _currentEmail) ??
-        (group.members.isNotEmpty
-            ? group.members.first
-            : GroupMember(
-                name: _currentName, email: _currentEmail));
+    final currentMember =
+        group.members.firstWhereOrNull((m) => m.email == _currentEmail) ??
+            (group.members.isNotEmpty
+                ? group.members.first
+                : GroupMember(name: _currentName, email: _currentEmail));
 
-    selectedPaidBy.value    = currentMember;
+    selectedPaidBy.value = currentMember;
+
+    // Default: split between ALL members including payer
     selectedSplitWith.value = List.from(group.members);
+
+    // Force reactive update
+    selectedSplitWith.refresh();
   }
 
   // ── Submit expense ────────────────────────────────────────────
 
   Future<void> submitGroupExpense() async {
-    final amount = double.tryParse(
-        expenseAmountController.text.trim());
+    final amount = double.tryParse(expenseAmountController.text.trim());
     final description = expenseDescController.text.trim();
 
     if (amount == null || amount <= 0) {
-      _showError('Enter a valid amount'); return;
+      _showError('Enter a valid amount');
+      return;
     }
     if (description.isEmpty) {
-      _showError('Enter a description'); return;
+      _showError('Enter a description');
+      return;
     }
     if (selectedGroupId.value.isEmpty) {
-      _showError('No group selected'); return;
+      _showError('No group selected');
+      return;
     }
     if (selectedPaidBy.value == null) {
-      _showError('Select who paid'); return;
+      _showError('Select who paid');
+      return;
     }
     if (selectedSplitWith.isEmpty) {
       _showError('Select at least one person to split with');
@@ -246,25 +252,25 @@ class GroupController extends GetxController {
 
       if (wasEdit) {
         success = await _service.updateGroupExpense(
-          groupId:      selectedGroupId.value,
-          expenseId:    editingExpenseId.value,
-          description:  description,
-          amount:       amount,
-          paidBy:       selectedPaidBy.value!.email,
-          paidByName:   selectedPaidBy.value!.displayName,
+          groupId: selectedGroupId.value,
+          expenseId: editingExpenseId.value,
+          description: description,
+          amount: amount,
+          paidBy: selectedPaidBy.value!.email,
+          paidByName: selectedPaidBy.value!.name.trim(),
           splitBetween: selectedSplitWith,
-          date:         selectedDate.value.toIso8601String(),
+          date: selectedDate.value.toIso8601String(),
         );
         if (success) _showSuccess('Expense updated');
       } else {
         success = await _service.addGroupExpense(
-          groupId:      selectedGroupId.value,
-          description:  description,
-          amount:       amount,
-          paidBy:       selectedPaidBy.value!.email,
-          paidByName:   selectedPaidBy.value!.displayName,
+          groupId: selectedGroupId.value,
+          description: description,
+          amount: amount,
+          paidBy: selectedPaidBy.value!.email,
+          paidByName: selectedPaidBy.value!.name.trim(),
           splitBetween: selectedSplitWith,
-          date:         selectedDate.value.toIso8601String(),
+          date: selectedDate.value.toIso8601String(),
         );
         if (success) _showSuccess('Expense added');
       }
@@ -274,9 +280,8 @@ class GroupController extends GetxController {
         _resetExpenseForm();
         Get.back();
       } else {
-        _showError(wasEdit
-            ? 'Failed to update expense'
-            : 'Failed to add expense');
+        _showError(
+            wasEdit ? 'Failed to update expense' : 'Failed to add expense');
       }
     } catch (e) {
       _showError(e.toString());
@@ -292,8 +297,8 @@ class GroupController extends GetxController {
     required String expenseId,
   }) async {
     try {
-      final success = await _service.deleteExpense(
-          groupId: groupId, expenseId: expenseId);
+      final success =
+          await _service.deleteExpense(groupId: groupId, expenseId: expenseId);
       if (success) {
         loadGroups();
         _showSuccess('Expense deleted');
@@ -308,21 +313,28 @@ class GroupController extends GetxController {
   // ── Start edit expense ────────────────────────────────────────
 
   void startEditExpense(GroupExpense expense, GroupModel group) {
-    isExpenseEditMode.value      = true;
-    editingExpenseId.value       = expense.id;
-    selectedGroupId.value        = group.id;
+    isExpenseEditMode.value = true;
+    editingExpenseId.value = expense.id;
+    selectedGroupId.value = group.id;
     expenseAmountController.text = expense.amount.toStringAsFixed(0);
-    expenseDescController.text   = expense.description;
-    selectedDate.value           = expense.date;
+    expenseDescController.text = expense.description;
+    selectedDate.value = expense.date;
 
     selectedPaidBy.value = group.members.firstWhere(
-      (m) => m.email == expense.paidBy,
+      (m) =>
+          m.email == expense.paidBy ||
+          m.name.trim().toLowerCase() ==
+              expense.paidByName.trim().toLowerCase(),
       orElse: () => group.members.first,
     );
 
+// Match by name first (name-based groups), fallback to email
     selectedSplitWith.value = group.members
-        .where((m) => expense.splitBetween.contains(m.email))
+        .where((m) =>
+            expense.splitBetween.contains(m.displayName) ||
+            (m.email.isNotEmpty && expense.splitBetween.contains(m.email)))
         .toList();
+
     if (selectedSplitWith.isEmpty) {
       selectedSplitWith.value = List.from(group.members);
     }
@@ -335,57 +347,49 @@ class GroupController extends GetxController {
     required String expenseId,
     required String memberEmail,
   }) async {
-    final groupIndex =
-        groups.indexWhere((g) => g.id == groupId);
+    final groupIndex = groups.indexWhere((g) => g.id == groupId);
     if (groupIndex != -1) {
-      final expenseIndex = groups[groupIndex]
-          .expenses
-          .indexWhere((e) => e.id == expenseId);
+      final expenseIndex =
+          groups[groupIndex].expenses.indexWhere((e) => e.id == expenseId);
       if (expenseIndex != -1) {
         final updatedSettlements = groups[groupIndex]
             .expenses[expenseIndex]
             .settlements
-            .map((s) => s.email == memberEmail
+            .map((s) => (s.email == memberEmail || s.name == memberEmail)
                 ? Settlement(
-                    name:   s.name,
-                    email:  s.email,
+                    name: s.name,
+                    email: s.email,
                     amount: s.amount,
-                    paid:   true,
+                    paid: true,
                   )
                 : s)
             .toList();
 
         final updatedExpense = GroupExpense(
-          id:           expenseId,
-          description:  groups[groupIndex]
-              .expenses[expenseIndex].description,
-          amount:       groups[groupIndex]
-              .expenses[expenseIndex].amount,
-          date:         groups[groupIndex]
-              .expenses[expenseIndex].date,
-          paidBy:       groups[groupIndex]
-              .expenses[expenseIndex].paidBy,
-          paidByName:   groups[groupIndex]
-              .expenses[expenseIndex].paidByName,
-          splitBetween: groups[groupIndex]
-              .expenses[expenseIndex].splitBetween,
-          perPersonShare: groups[groupIndex]
-              .expenses[expenseIndex].perPersonShare,
+          id: expenseId,
+          description: groups[groupIndex].expenses[expenseIndex].description,
+          amount: groups[groupIndex].expenses[expenseIndex].amount,
+          date: groups[groupIndex].expenses[expenseIndex].date,
+          paidBy: groups[groupIndex].expenses[expenseIndex].paidBy,
+          paidByName: groups[groupIndex].expenses[expenseIndex].paidByName,
+          splitBetween: groups[groupIndex].expenses[expenseIndex].splitBetween,
+          perPersonShare:
+              groups[groupIndex].expenses[expenseIndex].perPersonShare,
           settlements: updatedSettlements,
         );
 
-        final updatedExpenses = List<GroupExpense>.from(
-            groups[groupIndex].expenses);
+        final updatedExpenses =
+            List<GroupExpense>.from(groups[groupIndex].expenses);
         updatedExpenses[expenseIndex] = updatedExpense;
 
         final updatedGroup = GroupModel(
-          id:           groups[groupIndex].id,
-          title:        groups[groupIndex].title,
-          description:  groups[groupIndex].description,
-          createdBy:    groups[groupIndex].createdBy,
+          id: groups[groupIndex].id,
+          title: groups[groupIndex].title,
+          description: groups[groupIndex].description,
+          createdBy: groups[groupIndex].createdBy,
           creatorEmail: groups[groupIndex].creatorEmail,
-          members:      groups[groupIndex].members,
-          expenses:     updatedExpenses,
+          members: groups[groupIndex].members,
+          expenses: updatedExpenses,
         );
 
         groups[groupIndex] = updatedGroup;
@@ -395,8 +399,8 @@ class GroupController extends GetxController {
 
     try {
       await _service.markSettlementPaid(
-        groupId:     groupId,
-        expenseId:   expenseId,
+        groupId: groupId,
+        expenseId: expenseId,
         memberEmail: memberEmail,
       );
       _showSuccess('Marked as paid');
@@ -409,59 +413,72 @@ class GroupController extends GetxController {
   // ── Balances computation ──────────────────────────────────────
 
   List<DebtSummary> computeBalances(GroupModel group) {
+    // Step 1 — build net balance map
     final net = <String, double>{};
 
+    // Always use name as key — never email
+// This ensures consistent matching across all members
     for (final member in group.members) {
-      net[member.displayName] = 0.0;
+      net[member.name] = 0.0;
     }
 
     for (final expense in group.expenses) {
-      final paidByName = expense.paidByName.isNotEmpty
-          ? expense.paidByName
-          : expense.paidBy;
+      // paidByName is always stored as .name.trim() now
+      final paidByName =
+          expense.paidByName.isNotEmpty ? expense.paidByName : expense.paidBy;
 
       for (final s in expense.settlements) {
         if (!s.paid) {
+          // s.name is always the display name stored during expense creation
           final name = s.name.isNotEmpty ? s.name : s.email;
           net[paidByName] = (net[paidByName] ?? 0) + s.amount;
-          net[name]       = (net[name] ?? 0) - s.amount;
+          net[name] = (net[name] ?? 0) - s.amount;
         }
       }
     }
 
-    final debts     = <DebtSummary>[];
+    // Step 2 — separate creditors and debtors
+    // Use mutable lists with name + amount
     final creditors = net.entries
-        .where((e) => e.value > 0.5)
+        .where((e) => e.value > 0.01)
+        .map((e) => <dynamic>[e.key, e.value])
         .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final debtors = net.entries
-        .where((e) => e.value < -0.5)
-        .toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
+      ..sort((a, b) => (b[1] as double).compareTo(a[1] as double));
 
-    var ci = 0;
-    var di = 0;
-    final creditorAmounts =
-        creditors.map((e) => e.value).toList();
-    final debtorAmounts =
-        debtors.map((e) => e.value.abs()).toList();
+    final debtors = net.entries
+        .where((e) => e.value < -0.01)
+        .map((e) => <dynamic>[e.key, e.value.abs()])
+        .toList()
+      ..sort((a, b) => (b[1] as double).compareTo(a[1] as double));
+
+    // Step 3 — greedy debt minimization
+    final debts = <DebtSummary>[];
+    int ci = 0;
+    int di = 0;
 
     while (ci < creditors.length && di < debtors.length) {
-      final settle = creditorAmounts[ci] < debtorAmounts[di]
-          ? creditorAmounts[ci]
-          : debtorAmounts[di];
+      final creditorName = creditors[ci][0] as String;
+      final debtorName = debtors[di][0] as String;
+      double creditorAmount = creditors[ci][1] as double;
+      double debtorAmount = debtors[di][1] as double;
 
-      debts.add(DebtSummary(
-        from:   debtors[di].key,
-        to:     creditors[ci].key,
-        amount: settle,
-      ));
+      final settle =
+          creditorAmount < debtorAmount ? creditorAmount : debtorAmount;
 
-      creditorAmounts[ci] -= settle;
-      debtorAmounts[di]   -= settle;
+      if (settle > 0.01) {
+        debts.add(DebtSummary(
+          from: debtorName,
+          to: creditorName,
+          amount: settle,
+        ));
+      }
 
-      if (creditorAmounts[ci] < 0.5) ci++;
-      if (debtorAmounts[di]   < 0.5) di++;
+      creditors[ci][1] = creditorAmount - settle;
+      debtors[di][1] = debtorAmount - settle;
+
+      // Move to next creditor/debtor when fully settled
+      if ((creditors[ci][1] as double) < 0.01) ci++;
+      if ((debtors[di][1] as double) < 0.01) di++;
     }
 
     return debts;
@@ -470,41 +487,45 @@ class GroupController extends GetxController {
   // ── Reset forms ───────────────────────────────────────────────
 
   void _resetGroupForm() {
-    isEditMode.value     = false;
+    isEditMode.value = false;
     editingGroupId.value = '';
     titleController.clear();
     descController.clear();
-    for (final c in memberNameControllers) { c.dispose(); }
+    for (final c in memberNameControllers) {
+      c.dispose();
+    }
     memberNameControllers.assignAll([TextEditingController()]);
   }
 
   void _resetExpenseForm() {
-    isExpenseEditMode.value      = false;
-    editingExpenseId.value       = '';
+    isExpenseEditMode.value = false;
+    editingExpenseId.value = '';
     expenseAmountController.clear();
     expenseDescController.clear();
-    selectedDate.value           = DateTime.now();
-    selectedPaidBy.value         = null;
-    selectedSplitWith.value      = [];
+    selectedDate.value = DateTime.now();
+    selectedPaidBy.value = null;
+    selectedSplitWith.value = [];
   }
 
-  void resetGroupForm()   => _resetGroupForm();
+  void resetGroupForm() => _resetGroupForm();
   void resetExpenseForm() => _resetExpenseForm();
 
   // ── Snackbars ─────────────────────────────────────────────────
 
   void _showError(String msg) => Get.snackbar(
-        'Error', msg,
+        'Error',
+        msg,
         backgroundColor: AppColors.kError,
-        colorText:       Colors.white,
-        snackPosition:   SnackPosition.BOTTOM,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
       );
 
   void _showSuccess(String msg) => Get.snackbar(
-        'Success', msg,
+        'Success',
+        msg,
         backgroundColor: AppColors.kSuccess,
-        colorText:       Colors.white,
-        snackPosition:   SnackPosition.BOTTOM,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
       );
 
   @override
@@ -513,7 +534,9 @@ class GroupController extends GetxController {
     descController.dispose();
     expenseAmountController.dispose();
     expenseDescController.dispose();
-    for (final c in memberNameControllers) { c.dispose(); }
+    for (final c in memberNameControllers) {
+      c.dispose();
+    }
     super.onClose();
   }
 }

@@ -30,7 +30,9 @@ class AddGroupTransactionScreen extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (groupId.isNotEmpty && !controller.isExpenseEditMode.value) {
         controller.selectedGroupId.value = groupId;
-        if (controller.selectedPaidBy.value == null) {
+        // Only initialize if not already set — never override user selection
+        if (controller.selectedPaidBy.value == null ||
+            controller.selectedSplitWith.isEmpty) {
           final g = controller.groups.firstWhereOrNull((g) => g.id == groupId);
           if (g != null) controller.initExpenseDefaults(g);
         }
