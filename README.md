@@ -362,8 +362,8 @@ All dimensions use a custom `R` utility class that scales sizes relative to scre
   </tr>
   <tr>
     <td><img src="screenshots/home.png" width="220"/></td>
-    <td><img src="screenshots/analytics.png" width="220"/></td>
-    <td><img src="screenshots/groups.png" width="220"/></td>
+    <td><img src="screenshots/Analytics.png" width="220"/></td>
+    <td><img src="screenshots/Group.png" width="220"/></td>
   </tr>
   <tr>
     <td align="center"><b>Add Transaction</b></td>
@@ -371,13 +371,11 @@ All dimensions use a custom `R` utility class that scales sizes relative to scre
     <td align="center"><b>PIN Lock</b></td>
   </tr>
   <tr>
-    <td><img src="screenshots/add_transaction.png" width="220"/></td>
-    <td><img src="screenshots/balances.png" width="220"/></td>
-    <td><img src="screenshots/pin_lock.png" width="220"/></td>
+    <td><img src="screenshots/AddTransaction.png" width="220"/></td>
+    <td><img src="screenshots/Balances.png" width="220"/></td>
+    <td><img src="screenshots/pin.png" width="220"/></td>
   </tr>
 </table>
-
-> To add your own screenshots: create a `screenshots/` folder in the project root, capture images on your device, name them exactly as referenced above (`home.png`, `analytics.png`, `groups.png`, `add_transaction.png`, `balances.png`, `pin_lock.png`), and push to GitHub — they will render automatically in this README.
 
 ---
 
