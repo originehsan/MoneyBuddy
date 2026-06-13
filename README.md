@@ -382,15 +382,6 @@ All dimensions use a custom `R` utility class that scales sizes relative to scre
 
 ## Demo Video
 
-[![Watch the demo](https://img.shields.io/badge/▶-Watch%20Demo%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtube.com/your-video-link)
-
-A full walkthrough of MoneyBuddy — covering the dashboard, transactions, analytics, group expenses, budgets, goals, EMI tracker, and PIN security.
-
-> **Adding your demo video:**
-> - **YouTube (recommended for recruiters)** — record your screen, upload to YouTube, and replace the link above. Plays directly in-browser without downloading.
-> - **GitHub native** — drag and drop the video file into the README editor on GitHub; it auto-uploads and generates an embeddable link.
-> - **In-repo** — place the file at `demo/moneybuddy_demo.mp4` and link it as `[Download Demo Video](demo/moneybuddy_demo.mp4)`.
-
 ---
 
 ## Getting Started
