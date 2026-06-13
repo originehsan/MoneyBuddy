@@ -7,13 +7,14 @@ MoneyBuddy is a full-featured personal finance application built with Flutter. I
 ## Table of Contents
 
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Key Implementation Details](#key-implementation-details)
 - [Screens](#screens)
-- [Screenshots](#screenshots)
+
 - [Demo Video](#demo-video)
 - [Getting Started](#getting-started)
 - [Developer](#developer)
@@ -31,6 +32,35 @@ The app supports:
 - Secure PIN-based app lock
 - On-device ML for receipt scanning
 - Local push notifications for budget and EMI alerts
+
+---
+
+ ---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><b>Home</b></td>
+    <td align="center"><b>Analytics</b></td>
+    <td align="center"><b>Groups</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/home.png" width="220"/></td>
+    <td><img src="screenshots/Analytics.png" width="220"/></td>
+    <td><img src="screenshots/Group.png" width="220"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Add Transaction</b></td>
+    <td align="center"><b>Balances</b></td>
+    <td align="center"><b>PIN Lock</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/AddTransaction.png" width="220"/></td>
+    <td><img src="screenshots/Balances.png" width="220"/></td>
+    <td><img src="screenshots/pin.png" width="220"/></td>
+  </tr>
+</table>
 
 ---
 
