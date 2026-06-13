@@ -35,6 +35,35 @@ The app supports:
 
 ---
 
+ ---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><b>Home</b></td>
+    <td align="center"><b>Analytics</b></td>
+    <td align="center"><b>Groups</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/home.png" width="220"/></td>
+    <td><img src="screenshots/Analytics.png" width="220"/></td>
+    <td><img src="screenshots/Group.png" width="220"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Add Transaction</b></td>
+    <td align="center"><b>Balances</b></td>
+    <td align="center"><b>PIN Lock</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/AddTransaction.png" width="220"/></td>
+    <td><img src="screenshots/Balances.png" width="220"/></td>
+    <td><img src="screenshots/pin.png" width="220"/></td>
+  </tr>
+</table>
+
+---
+
 ## Features
 
 ### Authentication
@@ -350,35 +379,6 @@ All dimensions use a custom `R` utility class that scales sizes relative to scre
 | Goals | Savings goals with progress and add money |
 | EMI Tracker | Loan EMI list with due status |
 | Profile | Settings, security, preferences |
-
----
-
-## Screenshots
-
-<table>
-  <tr>
-    <td align="center"><b>Home</b></td>
-    <td align="center"><b>Analytics</b></td>
-    <td align="center"><b>Groups</b></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/home.png" width="220"/></td>
-    <td><img src="screenshots/Analytics.png" width="220"/></td>
-    <td><img src="screenshots/Group.png" width="220"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Add Transaction</b></td>
-    <td align="center"><b>Balances</b></td>
-    <td align="center"><b>PIN Lock</b></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/AddTransaction.png" width="220"/></td>
-    <td><img src="screenshots/Balances.png" width="220"/></td>
-    <td><img src="screenshots/pin.png" width="220"/></td>
-  </tr>
-</table>
-
----
 
 ## Demo Video
 
